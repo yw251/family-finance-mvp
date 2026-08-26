@@ -1,4 +1,4 @@
-const APP_VERSION = '0.6.0';
+const APP_VERSION = '0.7.0';
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGES_PER_PLATFORM = 12;
 const RECONCILIATION_TOLERANCE = 10;
@@ -1001,12 +1001,16 @@ function showGuide(platform) {
     ['展开全部分类', '确保页面包含月份、共支出和全部分类金额'],
     ['截取长截图', '截到“收起”为止，下方“每日对比”不需要上传']
   ] : [
-    ['进入月度账单统计', '支付宝账单统计 → 月度 → 选择月份 → 支出'],
-    ['打开支出分类', '切换到“支出分类”页面'],
-    ['收起二级分类', '尽量收起浅蓝色二级明细，只保留带序号的一级分类'],
-    ['截取完整分类', '截图应包含月份和所有一级分类；不支持长截图可上传多张']
+    ['进入月度账单统计', '支付宝 → 我的 → 账单 → 收支分析 → 月度账单'],
+    ['打开支出分类', '选择需要复盘的月份，并切换到“支出分类”'],
+    ['保留当前展开状态', '一级分类和已展开的浅蓝色二级明细都可以识别，不必逐项调整'],
+    ['截取完整分类', '截图应包含月份和所有分类；不支持长截图可按从上到下顺序上传多张']
   ];
-  $('#guideContent').innerHTML = `<div class="guide-steps">${steps.map(([title, copy], index) => `<div class="guide-step"><span>${index + 1}</span><div><b>${title}</b><small>${copy}</small></div></div>`).join('')}</div><div class="guide-tip">${isWechat ? '如果分多张截图上传，第一张请尽量包含月份和总支出。' : '系统只统计带序号的一级分类，浅蓝色二级金额不会重复加总。'}</div>`;
+  const preview = isWechat
+    ? '<div class="capture-preview wechat-preview"><div class="capture-preview-head"><span>2026年8月</span><b>共支出 ¥2,715.40</b></div><div class="capture-preview-row"><span>餐饮</span><b>¥1,577.18</b></div><div class="capture-preview-row"><span>交通</span><b>¥509.40</b></div><div class="capture-preview-row muted"><span>……全部分类直到列表结束</span></div></div>'
+    : '<div class="capture-preview alipay-preview"><div class="capture-preview-head"><span>2026年8月 · 支出分类</span><b>月度账单</b></div><div class="capture-preview-row"><span>1. 餐饮美食</span><b>¥719.78</b></div><div class="capture-preview-sub"><span>正餐 ¥613.49</span><span>咖啡奶茶 ¥101.30</span></div><div class="capture-preview-row muted"><span>……全部分类直到列表结束</span></div></div>';
+  $('#guideContent').innerHTML = `<div class="guide-layout"><div class="guide-steps">${steps.map(([title, copy], index) => `<div class="guide-step"><span>${index + 1}</span><div><b>${title}</b><small>${copy}</small></div></div>`).join('')}</div><div><span class="guide-example-label">合格截图示意（虚构金额）</span>${preview}<div class="guide-privacy">只上传分类汇总；请勿上传含交易对象、商品名称或账号信息的逐笔明细。</div></div></div><div class="guide-tip">${isWechat ? '如果分多张截图上传，第一张请尽量包含月份和总支出，并按从上到下的顺序选择。' : '展开二级分类时，系统会先核对二级合计与一级总额；无法核对时保留一级总额并要求人工确认。'}</div>`;
+  FinanceDB.addEvent('screenshot_guide_opened', { month: state.month, platform }).catch(() => {});
   openDialog('guideDialog');
 }
 
@@ -1051,6 +1055,20 @@ async function exportCurrentMonthCsv() {
   exportBlob(`家财月报-${state.month}.csv`, currentMonthCsv(), 'text/csv;charset=utf-8');
   await FinanceDB.addEvent('csv_exported', { month: state.month });
   showMessage('CSV 已导出', '可用 Excel、WPS 或其他表格软件打开。CSV 不含截图，也不能用于完整恢复本工具。');
+}
+
+async function exportTrialEventsCsv() {
+  const events = (await FinanceDB.listEvents()).sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  const rows = [['事件时间', '应用版本', '事件类型', '复盘月份', '平台', '耗时毫秒', '图片数', '切片数', '识别记录数', 'OCR置信度', '警告数', '解析器版本', '错误原因', '修改字段', '分类记录数']];
+  events.forEach((event) => rows.push([
+    event.createdAt || '', APP_VERSION, event.type || '', event.month || '', event.platform || '',
+    event.durationMs ?? '', event.imageCount ?? event.count ?? '', event.segmentCount ?? '', event.entryCount ?? '',
+    event.ocrConfidence ?? '', event.warningCount ?? '', event.parserVersion ?? '', event.reason ?? '', event.field ?? '', event.categoryCount ?? ''
+  ]));
+  const csv = `\ufeff${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
+  exportBlob(`家财月报-试用事件-${state.month}.csv`, csv, 'text/csv;charset=utf-8');
+  await FinanceDB.addEvent('trial_events_exported', { month: state.month, eventCount: events.length });
+  showMessage('试用事件已导出', `共导出 ${events.length} 条流程事件，不包含收入、支出金额或截图。发送前仍建议自行打开核对。`);
 }
 
 const safeFilename = (value) => String(value || '截图').replace(/[<>:"/\\|?*\x00-\x1f]/g, '_').slice(0, 90);
@@ -1320,6 +1338,7 @@ $('#exportReport').addEventListener('click', () => {
 });
 $('#exportLocalData').addEventListener('click', exportLocalBackup);
 $('#exportCurrentMonthCsv').addEventListener('click', () => exportCurrentMonthCsv().catch((error) => showMessage('CSV 导出失败', error.message)));
+$('#exportTrialEvents').addEventListener('click', () => exportTrialEventsCsv().catch((error) => showMessage('试用事件导出失败', error.message)));
 $('#exportOriginalImages').addEventListener('click', () => exportOriginalImages().catch((error) => showMessage('原图导出失败', error.message)));
 $('#restoreLocalData').addEventListener('click', () => $('#restoreLocalDataFile').click());
 $('#restoreLocalDataFile').addEventListener('change', (event) => restoreLocalBackup(event.target.files[0]));

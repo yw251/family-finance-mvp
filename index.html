@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="本地保存的家庭月度收支复盘工具，合并微信与支付宝支出汇总。" />
-    <title>家财月报 · 本地隐私版</title>
+  <title>家财月报 · 本地开发版</title>
   <link rel="stylesheet" href="mvp.css" />
 </head>
 <body>
-  <div class="prototype-ribbon">公开试用版 · 截图在当前浏览器内完成文字识别与分类</div>
+  <div class="prototype-ribbon">v0.7 外部试用版 · 截图在当前浏览器内完成文字识别与分类</div>
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#home" data-nav="home" aria-label="家财月报首页">
@@ -122,6 +122,10 @@
 
         <div class="step-panel" data-step-panel="2">
           <div class="card-heading page-card-heading"><div><span class="eyebrow">步骤 2</span><h2>上传本月使用平台的支出汇总</h2><p>微信或支付宝任选一个即可继续；两个平台都上传时，月报会自动合并统计。</p></div><button class="privacy-pill" data-open-dialog="privacyDialog">图片怎么处理？</button></div>
+          <aside class="capture-checklist" aria-label="上传前核对">
+            <div><span class="checklist-mark">✓</span><span><b>上传前先核对</b><small>截图应来自所选月份的“支出分类汇总”，不要上传逐笔账单。</small></span></div>
+            <ul><li>能看到月份</li><li>能看到总支出（如页面提供）</li><li>包含全部分类与金额</li><li>可遮挡头像等无关信息</li></ul>
+          </aside>
           <div class="upload-grid">
             <article class="upload-card wechat" data-platform="wechat">
               <div class="platform-heading"><span class="platform-logo">微</span><div><b>微信支出汇总</b><small>月份、共支出、全部分类</small></div><span class="upload-state" id="wechatState">等待上传</span></div>
@@ -133,7 +137,7 @@
               <div class="platform-heading"><span class="platform-logo">支</span><div><b>支付宝支出汇总</b><small>月度、支出分类、一级分类</small></div><span class="upload-state" id="alipayState">等待上传</span></div>
               <label class="drop-zone" for="alipayFiles"><span class="upload-symbol">＋</span><b>选择支付宝截图</b><small>建议先收起浅蓝色二级分类</small><input id="alipayFiles" type="file" accept="image/*" multiple /></label>
               <div class="file-preview" id="alipayPreview"></div>
-              <div class="upload-footer"><button class="text-link" data-guide="alipay">查看支付宝截图指引</button><span>只统计一级分类</span></div>
+              <div class="upload-footer"><button class="text-link" data-guide="alipay">查看支付宝截图指引</button><span>展开二级分类也可核对</span></div>
             </article>
           </div>
           <div class="demo-callout development-note"><div><span>本地自动识别</span><b>至少上传1张微信或支付宝汇总截图</b><small>首次识别需要联网载入中文模型，之后浏览器会缓存；识别过程中截图不会发送到服务器。</small></div><span class="safe-tag">本地OCR</span></div>
@@ -204,7 +208,7 @@
         <div class="settings-grid">
           <article class="content-card"><div class="setting-title"><span class="setting-icon">⌂</span><div><h2>本地数据</h2><p>收入、分类结果和原始截图均存入当前浏览器的本地数据库。</p></div><span class="safe-tag">已开启</span></div><div class="setting-row"><span><b>完成确认后删除原始截图</b><small>开启后只保留分类和金额；当前默认关闭</small></span><label class="switch"><input id="deleteImagesToggle" type="checkbox" /><i></i></label></div><div class="setting-row"><span><b>增强本地存储保护</b><small id="storageStatus">正在检查浏览器存储状态…</small></span><button class="text-link" id="requestPersistentStorage">申请保护</button></div><div class="setting-row"><span><b>云端视觉模型兜底</b><small>本地识别失败时，经确认后才上传</small></span><label class="switch"><input id="cloudFallbackToggle" type="checkbox" /><i></i></label></div></article>
           <article class="content-card"><div class="setting-title"><span class="setting-icon">≡</span><div><h2>一级／二级分类</h2><p>分类保存在本地；你修改过的平台映射会在下次识别时继续使用。</p></div><button class="text-link" data-open-dialog="categoryDialog">管理分类</button></div><div class="category-chips" id="categoryTreeSummary"></div></article>
-          <article class="content-card full-span"><div class="setting-title"><span class="setting-icon">⇩</span><div><h2>备份、导出与恢复</h2><p>完整 JSON 用于恢复应用；CSV 方便用 Excel 查看；原图保持上传时的 JPG / PNG / WebP 格式。</p></div><span class="safe-tag" id="backupStatus">尚未导出备份</span></div><div class="export-format-grid"><div><b>完整 JSON 备份</b><small>包含所有月份、分类、设置和截图，可在本工具中完整恢复。</small></div><div><b>本月 CSV 表格</b><small>包含本月收入与支出记录，适合查看和二次分析，不包含图片。</small></div><div><b>本月原始截图</b><small>逐张下载当前月份保留的原图；图片内容仍属于敏感财务信息。</small></div></div><div class="data-actions"><button class="button ghost" id="exportLocalData">导出完整 JSON 备份</button><button class="button ghost" id="exportCurrentMonthCsv">导出本月 CSV</button><button class="button ghost" id="exportOriginalImages">下载本月原图</button><button class="button ghost" id="restoreLocalData">从 JSON 备份恢复</button><input id="restoreLocalDataFile" type="file" accept="application/json,.json" hidden /><button class="button danger" id="clearLocalData">清除全部数据</button></div><p class="backup-warning">本地保存不等于永久备份：清理浏览器网站数据、删除浏览器用户资料或更换设备都可能造成数据丢失。建议完成每月复盘后导出一次完整 JSON。</p></article>
+          <article class="content-card full-span"><div class="setting-title"><span class="setting-icon">⇩</span><div><h2>备份、导出与恢复</h2><p>完整 JSON 用于恢复应用；业务 CSV 方便查看；试用事件 CSV 只含流程与耗时，不含收支金额。</p></div><span class="safe-tag" id="backupStatus">尚未导出备份</span></div><div class="export-format-grid"><div><b>完整 JSON 备份</b><small>包含所有月份、分类、设置和截图，可在本工具中完整恢复。</small></div><div><b>本月 CSV 表格</b><small>包含本月收入与支出记录，适合查看和二次分析，不包含图片。</small></div><div><b>试用事件 CSV</b><small>仅导出操作、时间、平台、耗时和错误类型，不导出收入或支出金额。</small></div><div><b>本月原始截图</b><small>逐张下载当前月份保留的原图；图片内容仍属于敏感财务信息。</small></div></div><div class="data-actions"><button class="button ghost" id="exportLocalData">导出完整 JSON 备份</button><button class="button ghost" id="exportCurrentMonthCsv">导出本月 CSV</button><button class="button ghost" id="exportTrialEvents">导出试用事件 CSV</button><button class="button ghost" id="exportOriginalImages">下载本月原图</button><button class="button ghost" id="restoreLocalData">从 JSON 备份恢复</button><input id="restoreLocalDataFile" type="file" accept="application/json,.json" hidden /><button class="button danger" id="clearLocalData">清除全部数据</button></div><p class="backup-warning">本地保存不等于永久备份：清理浏览器网站数据、删除浏览器用户资料或更换设备都可能造成数据丢失。建议完成每月复盘后导出一次完整 JSON。向测试主持人发送试用事件 CSV 前，也请先自行确认文件内容。</p></article>
         </div>
       </section>
     </main>
