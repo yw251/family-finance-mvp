@@ -1,4 +1,4 @@
-const APP_VERSION = '0.7.0';
+const APP_VERSION = '0.7.1';
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGES_PER_PLATFORM = 12;
 const RECONCILIATION_TOLERANCE = 10;
@@ -597,15 +597,15 @@ function renderRecognition() {
       const entryNeedsConfirmation = entry.needsConfirm && !entry.confirmed;
       const sourceLabel = entry.parentSource ? `${entry.parentSource} / ${entry.source}` : entry.source;
       return `<tr class="${entryNeedsConfirmation ? 'needs-confirm' : ''}">
-        <td><b>${escapeHtml(sourceLabel)}</b><br><small style="color:#526278">${isOcr ? `本地OCR${entry.reason ? ` · ${escapeHtml(entry.reason)}` : ''}` : '人工补充'}</small></td>
-        <td class="amount"><input class="entry-amount-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="number" min="0" step="0.01" value="${entry.amount}" aria-label="修改${escapeHtml(entry.source)}金额" /></td>
-        <td><select class="primary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}一级分类">${primaryOptions}</select></td>
-        <td><select class="secondary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}二级分类">${secondaryOptions}</select></td>
-        <td><label class="include-check"><input type="checkbox" data-include-source="${sourceIndex}" data-include-entry="${entryIndex}" ${entry.include ? 'checked' : ''} />计入</label></td>
-        <td><input class="entry-note-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="text" maxlength="60" value="${escapeHtml(entry.note || '')}" placeholder="可选备注" aria-label="${escapeHtml(entry.source)}备注" /></td>
-        <td><span class="confidence ${isOcr && entry.confidence < 85 ? 'low' : isOcr ? '' : 'manual'}">${isOcr ? `${entry.confidence}%` : '人工'}</span></td>
-        <td>${entryNeedsConfirmation ? `<button class="confirm-action" data-confirm-source="${sourceIndex}" data-confirm-entry="${entryIndex}">请确认</button>` : '<span class="confirmed-mark">✓ 已确认</span>'}</td>
-        <td><button class="delete-entry" data-delete-source="${sourceIndex}" data-delete-entry="${entryIndex}" aria-label="删除${escapeHtml(entry.source)}">×</button></td>
+        <td data-label="平台原分类"><b>${escapeHtml(sourceLabel)}</b><br><small style="color:#526278">${isOcr ? `本地OCR${entry.reason ? ` · ${escapeHtml(entry.reason)}` : ''}` : '人工补充'}</small></td>
+        <td class="amount" data-label="金额"><input class="entry-amount-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="number" min="0" step="0.01" value="${entry.amount}" aria-label="修改${escapeHtml(entry.source)}金额" /></td>
+        <td data-label="一级分类"><select class="primary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}一级分类">${primaryOptions}</select></td>
+        <td data-label="二级分类"><select class="secondary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}二级分类">${secondaryOptions}</select></td>
+        <td data-label="是否计入"><label class="include-check"><input type="checkbox" data-include-source="${sourceIndex}" data-include-entry="${entryIndex}" ${entry.include ? 'checked' : ''} />计入</label></td>
+        <td data-label="备注"><input class="entry-note-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="text" maxlength="60" value="${escapeHtml(entry.note || '')}" placeholder="可选备注" aria-label="${escapeHtml(entry.source)}备注" /></td>
+        <td data-label="置信度"><span class="confidence ${isOcr && entry.confidence < 85 ? 'low' : isOcr ? '' : 'manual'}">${isOcr ? `${entry.confidence}%` : '人工'}</span></td>
+        <td data-label="状态">${entryNeedsConfirmation ? `<button class="confirm-action" data-confirm-source="${sourceIndex}" data-confirm-entry="${entryIndex}">请确认</button>` : '<span class="confirmed-mark">✓ 已确认</span>'}</td>
+        <td data-label="操作"><button class="delete-entry" data-delete-source="${sourceIndex}" data-delete-entry="${entryIndex}" aria-label="删除${escapeHtml(entry.source)}">×</button></td>
       </tr>`;
     }).join('');
     const sourceChecks = [
@@ -1459,4 +1459,3 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 window.addEventListener('beforeunload', () => imageObjectUrls.forEach((url) => URL.revokeObjectURL(url)));
-

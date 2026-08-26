@@ -790,4 +790,3 @@
     detectedMonths
   };
 })(window);
-
