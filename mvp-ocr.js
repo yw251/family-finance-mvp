@@ -665,8 +665,27 @@
     context.putImageData(image, 0, 0);
   }
 
+  async function loadDrawable(blob) {
+    if (typeof createImageBitmap === 'function') {
+      try { return await createImageBitmap(blob); } catch (error) { /* use the mobile browser fallback below */ }
+    }
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const image = new Image();
+      image.onload = () => {
+        image.close = () => URL.revokeObjectURL(url);
+        resolve(image);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('手机浏览器无法解码这张截图'));
+      };
+      image.src = url;
+    });
+  }
+
   async function prepareSegments(record, platform) {
-    const bitmap = await createImageBitmap(record.blob);
+    const bitmap = await loadDrawable(record.blob);
     try {
       const segments = [];
       const scale = Math.min(1.6, Math.max(1, 1600 / bitmap.width));

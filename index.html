@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="本地保存的家庭月度收支复盘工具，合并微信与支付宝支出汇总。" />
   <title>家财月报 · 外部试用版</title>
-  <link rel="stylesheet" href="mvp.css" />
+  <link rel="stylesheet" href="mvp.css?v=0.7.2" />
 </head>
 <body>
-  <div class="prototype-ribbon">v0.7.1 外部试用版 · 手机与电脑网页均可使用</div>
+  <div class="prototype-ribbon">v0.7.2 外部试用版 · 手机与电脑网页均可使用</div>
   <div class="app-shell">
     <aside class="sidebar">
       <a class="brand" href="#home" data-nav="home" aria-label="家财月报首页">
@@ -39,13 +39,12 @@
           <article class="hero-card">
             <div class="hero-copy">
               <span class="eyebrow">2026 年 8 月 · 待完成</span>
-              <h1>不用记每一笔，<br />也能看懂这个月。</h1>
-              <p>填写一次收入，上传微信与支付宝的支出汇总截图，确认后生成统一月报。</p>
+              <h1>月度收支盘点</h1>
+              <p>手动填写收入，上传微信/支付宝支出汇总截图，确认后即可生成收支月报。</p>
               <div class="hero-actions">
                 <button class="button primary" data-start-review>开始本月复盘 <span>→</span></button>
                 <button class="button ghost" data-open-dialog="flowDialog">看看怎么完成</button>
               </div>
-              <div class="hero-trust"><span>✓ 不接入支付账户</span><span>✓ 不读取逐笔交易</span><span>✓ 支持识别后删除截图</span></div>
             </div>
             <div class="month-orbit" aria-label="五步完成月度复盘">
               <div class="orbit-center"><b>约 5–10</b><span>分钟完成</span><small>待真实测试验证</small></div>
@@ -71,12 +70,12 @@
         </div>
 
         <section class="section-block">
-          <div class="section-heading"><div><span class="eyebrow">历史记录</span><h2>每月只做一次，慢慢看见变化</h2></div><button class="text-link" data-nav="report">查看报告 →</button></div>
+          <div class="section-heading history-section-heading"><div><span class="eyebrow">历史记录</span><h2>每月记录一次，收支心中有数</h2></div><button class="text-link" data-nav="report">查看报告 →</button></div>
           <div class="history-dashboard">
             <article class="history-analysis">
               <div class="history-analysis-head"><div><b>近 4 个月收支趋势</b><small>单位：元</small></div><div class="history-legend"><span><i class="income"></i>收入</span><span><i class="expense"></i>支出</span></div></div>
               <div class="history-bars" id="overviewHistoryBars"></div>
-              <div class="history-insights"><div><span>4个月累计结余</span><b id="historyCumulative">¥ 0.00</b></div><div><span>平均结余率</span><b id="historyAverageRate">0%</b></div><div><span>支出最高月份</span><b id="historyHighestExpense">—</b></div></div>
+              <div class="history-insights"><div><span>4个月累计结余</span><b id="historyCumulative">¥ 0</b></div><div><span>平均结余率</span><b id="historyAverageRate">0%</b></div><div><span>支出最高月份</span><b id="historyHighestExpense">—</b></div></div>
             </article>
             <article class="history-ledger">
               <div class="history-ledger-head"><b>月度复盘档案</b><small>点击月份查看报告</small></div>
@@ -113,7 +112,7 @@
               <button class="add-row" id="addIncomeCategory">＋ 添加自定义收入分类</button>
             </article>
             <aside class="summary-card dark">
-              <span>本月收入合计</span><strong id="incomeTotal">¥ 0.00</strong><p>系统只负责加总，最终金额由你确认。</p>
+              <span>本月收入合计</span><strong id="incomeTotal">¥ 0</strong><p>系统只负责加总，最终金额由你确认。</p>
               <div class="mini-rule"><b>不算收入</b><span>自己账户间转账</span><span>借款到账</span><span>退款或报销</span></div>
             </aside>
           </div>
@@ -123,19 +122,19 @@
         <div class="step-panel" data-step-panel="2">
           <div class="card-heading page-card-heading"><div><span class="eyebrow">步骤 2</span><h2>上传本月使用平台的支出汇总</h2><p>微信或支付宝任选一个即可继续；两个平台都上传时，月报会自动合并统计。</p></div><button class="privacy-pill" data-open-dialog="privacyDialog">图片怎么处理？</button></div>
           <aside class="capture-checklist" aria-label="上传前核对">
-            <div><span class="checklist-mark">✓</span><span><b>上传前先核对</b><small>截图应来自所选月份的“支出分类汇总”，不要上传逐笔账单。</small></span></div>
-            <ul><li>能看到月份</li><li>能看到总支出（如页面提供）</li><li>包含全部分类与金额</li><li>可遮挡头像等无关信息</li></ul>
+            <div><span class="checklist-mark">✓</span><span><b>上传前先核对</b><small>截图应来自所选月份的“支出分类汇总”，不要上传逐笔账单。<mark class="capture-warning">检查平台自动分类是否正确，如有误请先手动调整再截图。</mark></small></span></div>
+            <ul><li>能看到月份</li><li>能看到总支出（如页面提供）</li><li>包含全部分类与金额</li><li>平台分类已经核对</li></ul>
           </aside>
           <div class="upload-grid">
             <article class="upload-card wechat" data-platform="wechat">
               <div class="platform-heading"><span class="platform-logo">微</span><div><b>微信支出汇总</b><small>月份、共支出、全部分类</small></div><span class="upload-state" id="wechatState">等待上传</span></div>
-              <label class="drop-zone" for="wechatFiles"><span class="upload-symbol">＋</span><b>选择微信截图</b><small>支持长截图或多张 JPG / PNG</small><input id="wechatFiles" type="file" accept="image/*" multiple /></label>
+              <label class="drop-zone" for="wechatFiles"><span class="upload-symbol">＋</span><b>选择微信截图</b><small>支持长截图或多张图片</small><input id="wechatFiles" class="native-file-input" type="file" accept="image/*,.heic,.heif" multiple aria-label="选择微信截图文件" /></label>
               <div class="file-preview" id="wechatPreview"></div>
               <div class="upload-footer"><button class="text-link" data-guide="wechat">查看微信截图指引</button><span>不会读取交易对象</span></div>
             </article>
             <article class="upload-card alipay" data-platform="alipay">
               <div class="platform-heading"><span class="platform-logo">支</span><div><b>支付宝支出汇总</b><small>月度、支出分类、一级分类</small></div><span class="upload-state" id="alipayState">等待上传</span></div>
-              <label class="drop-zone" for="alipayFiles"><span class="upload-symbol">＋</span><b>选择支付宝截图</b><small>建议先收起浅蓝色二级分类</small><input id="alipayFiles" type="file" accept="image/*" multiple /></label>
+              <label class="drop-zone" for="alipayFiles"><span class="upload-symbol">＋</span><b>选择支付宝截图</b><small>建议保留浅蓝色二级分类</small><input id="alipayFiles" class="native-file-input" type="file" accept="image/*,.heic,.heif" multiple aria-label="选择支付宝截图文件" /></label>
               <div class="file-preview" id="alipayPreview"></div>
               <div class="upload-footer"><button class="text-link" data-guide="alipay">查看支付宝截图指引</button><span>展开二级分类也可核对</span></div>
             </article>
@@ -150,23 +149,10 @@
             <div><span class="eyebrow">步骤 3</span><h2>核对自动识别结果</h2><p>核对一级／二级分类，可为每项添加备注；漏识别的分类直接在下方补充。</p></div>
             <div class="check-score" id="reconcileScore"><span>金额校验</span><b>等待填写平台总额</b><small>差额小于 ¥10 可作为统计误差通过</small></div>
           </div>
-          <div class="recognition-workbench">
-            <article class="content-card manual-recognition-card">
-              <div class="card-heading"><div><span class="eyebrow">识别遗漏时补充</span><h2>快速补充截图漏项</h2><p>OCR漏项时，按截图中的平台分类和金额补充；一级／二级分类均可修改。</p></div><span class="safe-tag">人工兜底</span></div>
-              <div class="manual-recognition-form">
-                <label><span>支付平台</span><select id="manualEntryPlatform"><option value="wechat">微信</option><option value="alipay">支付宝</option></select></label>
-                <label><span>平台原分类</span><input id="manualEntrySource" type="text" maxlength="30" placeholder="如：餐饮美食" /></label>
-                <label><span>识别/录入金额</span><div class="money-input"><i>¥</i><input id="manualEntryAmount" type="number" min="0" step="0.01" placeholder="0.00" /></div></label>
-                <label><span>一级分类</span><select id="manualEntryPrimary"></select></label>
-                <label><span>二级分类</span><select id="manualEntrySecondary"></select></label>
-                <label><span>备注（可选）</span><input id="manualEntryNote" type="text" maxlength="60" placeholder="如：本月咖啡卡充值" /></label>
-              </div>
-              <div class="platform-total-form"><label><span>微信截图总支出</span><div class="money-input"><i>¥</i><input id="wechatDeclaredTotal" type="number" min="0" step="0.01" placeholder="0.00" /></div></label><label><span>支付宝截图总支出</span><div class="money-input"><i>¥</i><input id="alipayDeclaredTotal" type="number" min="0" step="0.01" placeholder="0.00" /></div></label></div>
-              <div class="inline-actions"><button class="button secondary" id="addManualEntry">＋ 加入确认表</button><button class="text-link" data-open-dialog="categoryDialog">＋ 自定义分类</button></div>
-            </article>
+          <div class="recognition-workbench image-only">
             <aside class="content-card local-image-review"><div class="list-card-head"><div><b>本月截图</b><small>点击缩略图可以放大核对</small></div><span class="safe-tag" id="localImageCount">0 张</span></div><div id="reviewImageStrip" class="review-image-strip"></div></aside>
           </div>
-          <div class="review-toolbar"><div><span class="legend-dot ai"></span>本地识别并自动确认 <span class="legend-dot confirm"></span>低置信度需人工确认</div><div class="toolbar-actions"><button class="text-link" data-open-dialog="categoryDialog">管理自定义分类</button><button class="text-link" data-open-dialog="mappingDialog">分类规则说明</button></div></div>
+          <div class="review-toolbar"><div><span class="legend-dot ai"></span>已自动确认 <span class="legend-dot confirm"></span>待人工确认</div><div class="toolbar-actions"><button class="text-link" data-open-dialog="categoryDialog">管理自定义分类</button><button class="text-link" data-open-dialog="mappingDialog">分类规则说明</button></div></div>
           <div id="recognitionTables" class="recognition-stack"></div>
           <div class="step-actions"><button class="button ghost" data-prev-step="2">← 返回上传</button><div><span class="pending-copy" id="pendingCopy">还有 4 项待确认</span><button class="button primary" id="continueExtraButton" disabled>截图数据确认，继续补充 <span>→</span></button></div></div>
         </div>
@@ -184,7 +170,7 @@
               </div>
               <button class="button secondary" id="addExtraExpense">＋ 添加这笔补充</button>
             </article>
-            <aside class="content-card extra-expense-list-card"><div class="list-card-head"><div><b>已补充记录</b><small>不会与微信、支付宝金额重复</small></div><strong id="extraExpenseTotal">¥ 0.00</strong></div><div id="extraExpenseList" class="extra-expense-list"><div class="empty-state">目前没有补充记录</div></div></aside>
+            <aside class="content-card extra-expense-list-card"><div class="list-card-head"><div><b>已补充记录</b><small>不会与微信、支付宝金额重复</small></div><strong id="extraExpenseTotal">¥ 0</strong></div><div id="extraExpenseList" class="extra-expense-list"><div class="empty-state">目前没有补充记录</div></div></aside>
           </div>
           <div class="step-actions"><button class="button ghost" data-prev-step="3">← 返回确认</button><button class="button primary" id="completeReviewButton">完成本月复盘 <span>→</span></button></div>
         </div>
@@ -208,7 +194,7 @@
         <div class="settings-grid">
           <article class="content-card"><div class="setting-title"><span class="setting-icon">⌂</span><div><h2>本地数据</h2><p>收入、分类结果和原始截图均存入当前浏览器的本地数据库。</p></div><span class="safe-tag">已开启</span></div><div class="setting-row"><span><b>完成确认后删除原始截图</b><small>开启后只保留分类和金额；当前默认关闭</small></span><label class="switch"><input id="deleteImagesToggle" type="checkbox" /><i></i></label></div><div class="setting-row"><span><b>增强本地存储保护</b><small id="storageStatus">正在检查浏览器存储状态…</small></span><button class="text-link" id="requestPersistentStorage">申请保护</button></div><div class="setting-row"><span><b>云端视觉模型兜底</b><small>本地识别失败时，经确认后才上传</small></span><label class="switch"><input id="cloudFallbackToggle" type="checkbox" /><i></i></label></div></article>
           <article class="content-card"><div class="setting-title"><span class="setting-icon">≡</span><div><h2>一级／二级分类</h2><p>分类保存在本地；你修改过的平台映射会在下次识别时继续使用。</p></div><button class="text-link" data-open-dialog="categoryDialog">管理分类</button></div><div class="category-chips" id="categoryTreeSummary"></div></article>
-          <article class="content-card full-span"><div class="setting-title"><span class="setting-icon">⇩</span><div><h2>备份、导出与恢复</h2><p>完整 JSON 用于恢复应用；业务 CSV 方便查看；试用事件 CSV 只含流程与耗时，不含收支金额。</p></div><span class="safe-tag" id="backupStatus">尚未导出备份</span></div><div class="export-format-grid"><div><b>完整 JSON 备份</b><small>包含所有月份、分类、设置和截图，可在本工具中完整恢复。</small></div><div><b>本月 CSV 表格</b><small>包含本月收入与支出记录，适合查看和二次分析，不包含图片。</small></div><div><b>试用事件 CSV</b><small>仅导出操作、时间、平台、耗时和错误类型，不导出收入或支出金额。</small></div><div><b>本月原始截图</b><small>逐张下载当前月份保留的原图；图片内容仍属于敏感财务信息。</small></div></div><div class="data-actions"><button class="button ghost" id="exportLocalData">导出完整 JSON 备份</button><button class="button ghost" id="exportCurrentMonthCsv">导出本月 CSV</button><button class="button ghost" id="exportTrialEvents">导出试用事件 CSV</button><button class="button ghost" id="exportOriginalImages">下载本月原图</button><button class="button ghost" id="restoreLocalData">从 JSON 备份恢复</button><input id="restoreLocalDataFile" type="file" accept="application/json,.json" hidden /><button class="button danger" id="clearLocalData">清除全部数据</button></div><p class="backup-warning">本地保存不等于永久备份：清理浏览器网站数据、删除浏览器用户资料或更换设备都可能造成数据丢失。建议完成每月复盘后导出一次完整 JSON。向测试主持人发送试用事件 CSV 前，也请先自行确认文件内容。</p></article>
+          <article class="content-card full-span"><div class="setting-title"><span class="setting-icon">⇩</span><div><h2>备份、导出与恢复</h2><p>完整 JSON 用于恢复应用；业务 CSV 方便查看；试用事件 CSV 只含流程与耗时，不含收支金额。</p></div><span class="safe-tag" id="backupStatus">尚未导出备份</span></div><div class="export-format-grid"><div><span><b>完整 JSON 备份</b><small>包含所有月份、分类、设置和截图，可在本工具中完整恢复。</small></span><button class="button ghost" id="exportLocalData">导出</button></div><div><span><b>本月 CSV 表格</b><small>包含本月收入与支出记录，适合查看和二次分析，不包含图片。</small></span><button class="button ghost" id="exportCurrentMonthCsv">导出</button></div><div><span><b>试用事件 CSV</b><small>仅导出操作、时间、平台、耗时和错误类型，不导出收入或支出金额。</small></span><button class="button ghost" id="exportTrialEvents">导出</button></div><div><span><b>本月原始截图</b><small>逐张下载当前月份保留的原图；图片内容仍属于敏感财务信息。</small></span><button class="button ghost" id="exportOriginalImages">下载</button></div></div><div class="data-actions"><button class="button ghost" id="restoreLocalData">从 JSON 备份恢复</button><input id="restoreLocalDataFile" type="file" accept="application/json,.json" hidden /><button class="button danger" id="clearLocalData">清除全部数据</button></div><p class="backup-warning">本地保存不等于永久备份：清理浏览器网站数据、删除浏览器用户资料或更换设备都可能造成数据丢失。建议完成每月复盘后导出一次完整 JSON。向测试主持人发送试用事件 CSV 前，也请先自行确认文件内容。</p></article>
         </div>
       </section>
     </main>
@@ -220,6 +206,19 @@
     <div id="guideContent"></div>
     <div class="modal-actions"><button class="button primary" data-close-dialog="guideDialog">我知道了</button></div>
   </dialog>
+  <dialog id="manualEntryDialog" class="modal wide-modal manual-entry-modal">
+    <button class="modal-close" data-close-dialog="manualEntryDialog" aria-label="关闭">×</button>
+    <span class="eyebrow">人工补充</span><h2>补充截图识别漏项</h2><p class="modal-note">对照原始截图填写缺少的平台分类和金额，加入后仍可在确认表中修改。</p>
+    <div class="manual-recognition-form">
+      <label><span>支付平台</span><select id="manualEntryPlatform"><option value="wechat">微信</option><option value="alipay">支付宝</option></select></label>
+      <label><span>平台原分类</span><input id="manualEntrySource" type="text" maxlength="30" placeholder="如：餐饮美食" /></label>
+      <label><span>识别/录入金额</span><div class="money-input"><i>¥</i><input id="manualEntryAmount" type="number" min="0" step="0.01" placeholder="0.00" /></div></label>
+      <label><span>一级分类</span><select id="manualEntryPrimary"></select></label>
+      <label><span>二级分类</span><select id="manualEntrySecondary"></select></label>
+      <label><span>备注（可选）</span><input id="manualEntryNote" type="text" maxlength="60" placeholder="如：本月咖啡卡充值" /></label>
+    </div>
+    <div class="modal-actions"><button class="button ghost" data-open-dialog="categoryDialog">＋ 自定义分类</button><button class="button primary" id="addManualEntry">加入确认表</button></div>
+  </dialog>
   <dialog id="privacyDialog" class="modal">
     <button class="modal-close" data-close-dialog="privacyDialog" aria-label="关闭">×</button><span class="eyebrow">隐私说明</span><h2>我们只需要“分类＋金额”</h2>
     <div class="privacy-points"><p><b>不会接入支付账户</b><span>不需要微信、支付宝账号或密码。</span></p><p><b>不读取逐笔交易</b><span>请只上传分类汇总截图，不要上传含交易对象的明细截图。</span></p><p><b>在浏览器内识别</b><span>首次联网下载的是识别程序和中文字库，截图本身不会作为网络请求上传。</span></p><p><b>本地保存并可删除</b><span>收入、截图和确认结果写入当前浏览器的本地数据库，可备份或彻底清除。</span></p></div>
@@ -227,15 +226,15 @@
   </dialog>
   <dialog id="flowDialog" class="modal">
     <button class="modal-close" data-close-dialog="flowDialog" aria-label="关闭">×</button><span class="eyebrow">完整流程</span><h2>每月一次，五步完成</h2>
-    <div class="flow-steps"><p><span>1</span><b>手动填写收入</b><small>只填月度分类合计</small></p><p><span>2</span><b>上传汇总截图</b><small>微信或支付宝至少一个</small></p><p><span>3</span><b>确认特殊项目</b><small>转账、代付和模糊分类</small></p><p><span>4</span><b>补充其他支出</b><small>银行卡、现金等渠道</small></p><p><span>5</span><b>查看统一月报</b><small>现金流、结构与同比环比</small></p></div>
+    <div class="flow-steps"><p><span>1</span><b>手动填写收入</b><small>只填月度分类合计</small></p><p><span>2</span><b>上传支出汇总截图</b><small>微信或支付宝至少一个</small></p><p><span>3</span><b>确认特殊项目</b><small>转账、代付和模糊分类</small></p><p><span>4</span><b>补充其他支出</b><small>银行卡、现金等渠道</small></p><p><span>5</span><b>查看收支盘点月报</b><small>现金流、结构与同比环比</small></p></div>
   </dialog>
   <dialog id="mappingDialog" class="modal wide-modal">
     <button class="modal-close" data-close-dialog="mappingDialog" aria-label="关闭">×</button><span class="eyebrow">统一分类规则</span><h2>平台原分类会被映射到同一口径</h2>
     <div class="mapping-examples"><p><span>微信「咖啡」</span><b>→ 吃 / 咖啡奶茶</b></p><p><span>支付宝「交通出行」</span><b>→ 行 / 其他</b></p><p><span>支付宝「服饰装扮」</span><b>→ 穿 / 衣服</b></p><p class="warning"><span>微信「转账」/ 支付宝「亲友代付」</span><b>→ 人情 / 其他，必须人工确认</b></p></div><p class="modal-note">OCR只提出建议；用户可新建一级和二级分类，金额加总与容差判断由程序完成。</p>
   </dialog>
   <dialog id="categoryDialog" class="modal wide-modal">
-    <button class="modal-close" data-close-dialog="categoryDialog" aria-label="关闭">×</button><span class="eyebrow">自定义支出分类</span><h2>建立适合你的一级／二级分类</h2><p class="modal-note">填写已有一级分类可为它增加二级分类；填写新名称则创建新的一级分类。删除分类只影响后续选择，不会删除历史记录。</p>
-    <div class="category-create-form"><label><span>一级分类</span><input id="customPrimaryName" type="text" maxlength="12" placeholder="如：吃" /></label><label><span>二级分类</span><input id="customSecondaryName" type="text" maxlength="16" placeholder="如：早餐（不填则为其他）" /></label><button class="button secondary" id="saveCustomCategory">保存分类</button></div>
+    <button class="modal-close" data-close-dialog="categoryDialog" aria-label="关闭">×</button><span class="eyebrow">自定义支出分类</span><h2>建立适合你的一级／二级分类</h2><p class="modal-note">填写已有一级分类可为它增加二级分类；新建一级分类时，二级分类可以不填。删除分类只影响后续选择，不会删除历史记录。</p>
+    <div class="category-create-form"><label><span>一级分类</span><input id="customPrimaryName" type="text" maxlength="12" placeholder="如：吃" /></label><label><span>二级分类（可选）</span><input id="customSecondaryName" type="text" maxlength="16" placeholder="如：早餐；也可以留空" /></label><button class="button secondary" id="saveCustomCategory">保存分类</button></div>
     <div id="categoryTreeEditor" class="category-tree-editor"></div>
     <div class="modal-actions"><button class="button ghost" id="restoreDefaultCategories">恢复系统预设分类</button><button class="button primary" data-close-dialog="categoryDialog">完成</button></div>
   </dialog>
@@ -243,8 +242,8 @@
   <dialog id="messageDialog" class="modal small-modal"><button class="modal-close" data-close-dialog="messageDialog" aria-label="关闭">×</button><span class="eyebrow">本地应用提示</span><h2 id="messageTitle">操作完成</h2><p id="messageText"></p><div class="modal-actions"><button class="button primary" data-close-dialog="messageDialog">知道了</button></div></dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js" crossorigin="anonymous"></script>
-  <script src="mvp-db.js"></script>
-  <script src="mvp-ocr.js"></script>
-  <script src="mvp.js"></script>
+  <script src="mvp-db.js?v=0.7.2"></script>
+  <script src="mvp-ocr.js?v=0.7.2"></script>
+  <script src="mvp.js?v=0.7.2"></script>
 </body>
 </html>

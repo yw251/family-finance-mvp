@@ -5,6 +5,7 @@
   const DB_VERSION = 1;
   const STORES = ['reviews', 'images', 'events', 'settings'];
   let databasePromise;
+  const uniqueId = () => global.crypto?.randomUUID?.() || `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
   const requestResult = (request) => new Promise((resolve, reject) => {
     request.onsuccess = () => resolve(request.result);
@@ -100,7 +101,7 @@
 
   async function addEvent(type, details = {}) {
     const event = {
-      id: crypto.randomUUID(),
+      id: uniqueId(),
       type,
       createdAt: new Date().toISOString(),
       ...details

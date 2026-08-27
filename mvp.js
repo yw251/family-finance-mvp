@@ -1,8 +1,8 @@
-const APP_VERSION = '0.7.1';
+const APP_VERSION = '0.7.2';
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGES_PER_PLATFORM = 12;
 const RECONCILIATION_TOLERANCE = 10;
-const CATEGORY_SCHEMA_VERSION = 2;
+const CATEGORY_SCHEMA_VERSION = 3;
 
 const DEFAULT_CATEGORY_TREE = [
   { name: '吃', children: ['外卖简餐', '外食', '生鲜采购', '咖啡奶茶', '零食', '其他'] },
@@ -15,11 +15,11 @@ const DEFAULT_CATEGORY_TREE = [
   { name: '健康', children: ['运动', '看病', '买药', '疫苗', '保险', '其他'] },
   { name: '成长', children: ['英语', '读书', '其他'] },
   { name: '娱乐', children: ['旅行', '影音', '其他'] },
-  { name: '人情', children: ['其他'] },
-  { name: '房租', children: ['其他'] },
-  { name: '房贷', children: ['其他'] },
-  { name: '父母', children: ['其他'] },
-  { name: '其他', children: ['宠物', '其他'] }
+  { name: '人情', children: [] },
+  { name: '房租', children: [] },
+  { name: '房贷', children: [] },
+  { name: '父母', children: [] },
+  { name: '其他', children: [] }
 ];
 const LEGACY_PRIMARY_MAP = {
   餐饮: '吃', 居住缴费: '住', 交通出行: '行', 衣物与护理: '穿', 日用与数码: '用',
@@ -66,7 +66,9 @@ let ocrRunning = false;
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const yuan = (number) => `¥ ${Number(number || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const uniqueId = () => globalThis.crypto?.randomUUID?.() || `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+const yuan = (number) => `¥ ${Math.round(Number(number || 0)).toLocaleString('zh-CN')}`;
+const yuanPrecise = (number) => `¥ ${Number(number || 0).toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 const sum = (values) => values.reduce((total, value) => total + Number(value || 0), 0);
 const formatFileSize = (bytes) => bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[character]));
@@ -84,7 +86,7 @@ function normalizeCategoryTree(value) {
     const name = String(group?.name || '').trim().slice(0, 12);
     if (!name || groups.some((item) => item.name === name)) return;
     const children = [...new Set((Array.isArray(group.children) ? group.children : []).map((child) => String(child || '').trim().slice(0, 16)).filter(Boolean))];
-    groups.push({ name, children: children.length ? children : ['其他'] });
+    groups.push({ name, children });
   });
   return groups.length ? groups : DEFAULT_CATEGORY_TREE.map((group) => ({ name: group.name, children: [...group.children] }));
 }
@@ -111,6 +113,7 @@ function suggestCategory(sourceName) {
 
 function secondaryOptionsFor(category, currentValue = '') {
   const group = categoryTree.find((item) => item.name === category);
+  if (group && group.children.length === 0) return [];
   return [...new Set([...(group?.children || ['其他']), currentValue].filter(Boolean))];
 }
 
@@ -124,7 +127,9 @@ function normalizeClassification(record = {}) {
     const legacyCategory = LEGACY_PRIMARY_MAP[category];
     category = suggested.category !== '其他' || legacyCategory === '其他' ? suggested.category : legacyCategory;
   }
-  if (!subcategory) subcategory = suggested.category === category ? suggested.subcategory : secondaryOptionsFor(category)[0] || '其他';
+  const categoryGroup = categoryTree.find((item) => item.name === category);
+  if (categoryGroup && categoryGroup.children.length === 0) subcategory = '';
+  else if (!subcategory) subcategory = suggested.category === category ? suggested.subcategory : secondaryOptionsFor(category)[0] || '其他';
   return { ...record, category, subcategory, note: String(record.note || '') };
 }
 
@@ -385,7 +390,7 @@ function renderUpload(platform) {
   const preview = $(`#${platform}Preview`);
   const status = $(`#${platform}State`);
   preview.innerHTML = records.map((record) => `<div class="upload-preview-card"><img src="${imageUrl(record)}" alt="${platformName(platform)}截图缩略图" data-preview-image="${record.id}" /><span><b title="${escapeHtml(record.name)}">${escapeHtml(record.name)}</b><small>${record.width} × ${record.height}</small><small>${formatFileSize(record.size)} · 本地已保存</small></span><button type="button" data-delete-image="${record.id}" data-image-platform="${platform}" aria-label="删除这张截图">×</button></div>`).join('');
-  status.textContent = records.length ? `本地已存 ${records.length} 张` : '本月可不上传';
+  status.textContent = records.length ? `本地已存 ${records.length} 张` : '等待上传';
   status.classList.toggle('ready', records.length > 0);
   state.uploads[platform] = records.map(({ id, name, type, size, width, height, hash, createdAt }) => ({ id, name, type, size, width, height, hash, createdAt }));
   updateRecognitionButton();
@@ -405,16 +410,45 @@ function updateRecognitionButton() {
 }
 
 async function imageDimensions(file) {
-  const bitmap = await createImageBitmap(file);
-  const dimensions = { width: bitmap.width, height: bitmap.height };
-  bitmap.close();
-  return dimensions;
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const dimensions = { width: bitmap.width, height: bitmap.height };
+      bitmap.close();
+      return dimensions;
+    } catch (error) { /* use the mobile browser fallback below */ }
+  }
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      URL.revokeObjectURL(url);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('浏览器无法读取这张图片'));
+    };
+    image.src = url;
+  });
 }
 
 async function fileHash(file) {
-  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (globalThis.crypto?.subtle) {
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+  let hash = 2166136261;
+  bytes.forEach((byte) => { hash = Math.imul(hash ^ byte, 16777619); });
+  return `local-${(hash >>> 0).toString(16)}-${file.size}`;
 }
+
+const supportedImageFile = (file) => {
+  const supportedType = /^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type || '');
+  const supportedName = /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name || '');
+  return supportedType || supportedName;
+};
 
 async function handleImageFiles(platform, fileList) {
   const startedAt = performance.now();
@@ -425,10 +459,10 @@ async function handleImageFiles(platform, fileList) {
     showMessage('截图数量过多', `每个平台每月最多保存 ${MAX_IMAGES_PER_PLATFORM} 张截图。`);
     return;
   }
-  const invalid = files.find((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > MAX_IMAGE_BYTES);
+  const invalid = files.find((file) => !supportedImageFile(file) || file.size > MAX_IMAGE_BYTES);
   if (invalid) {
     FinanceDB.addEvent('image_import_rejected', { month: state.month, platform, reason: invalid.size > MAX_IMAGE_BYTES ? 'file_too_large' : 'unsupported_type' }).catch(() => {});
-    showMessage('有一张图片无法导入', '仅支持 JPG、PNG、WebP，且单张不超过 15 MB。');
+    showMessage('有一张图片无法导入', '支持 JPG、PNG、WebP、HEIC，且单张不超过 15 MB。');
     return;
   }
   const button = $('#recognizeButton');
@@ -440,7 +474,7 @@ async function handleImageFiles(platform, fileList) {
       const [dimensions, hash] = await Promise.all([imageDimensions(file), fileHash(file)]);
       if ([...existing, ...records].some((record) => record.hash === hash)) continue;
       records.push({
-        id: crypto.randomUUID(), month: state.month, platform, name: file.name,
+        id: uniqueId(), month: state.month, platform, name: file.name,
         type: file.type, size: file.size, width: dimensions.width, height: dimensions.height,
         hash, createdAt: new Date().toISOString(), blob: file
       });
@@ -533,7 +567,7 @@ async function startRecognition() {
             const remembered = ocrCategoryMappings[`${platform}|${entry.source}`];
             return normalizeClassification({
               ...entry,
-              id: previous?.id || crypto.randomUUID(),
+              id: previous?.id || uniqueId(),
               category: previous?.category || remembered?.category || entry.category,
               subcategory: previous?.subcategory || remembered?.subcategory || entry.subcategory,
               include: previous?.include ?? remembered?.include ?? entry.include,
@@ -581,7 +615,7 @@ function renderRecognition() {
   target.innerHTML = state.sources.map((source, sourceIndex) => {
     const active = sourceIsActive(source);
     if (!active) {
-      return `<article class="recognition-card inactive-platform"><div class="recognition-heading"><span class="platform-logo" style="background:${source.id === 'wechat' ? '#475569' : '#245fa4'}">${source.id === 'wechat' ? '微' : '支'}</span><strong>${source.name}支出</strong><small>本月未上传截图，不参与金额校验和月报统计</small><span class="reconcile-badge pending">本月跳过</span></div></article>`;
+      return `<article class="recognition-card inactive-platform"><div class="recognition-heading"><span class="platform-logo" style="background:${source.id === 'wechat' ? '#475569' : '#245fa4'}">${source.id === 'wechat' ? '微' : '支'}</span><span class="recognition-title"><strong>${source.name}支出</strong><small>本月未上传截图，不参与金额校验和月报统计</small></span><span class="reconcile-badge pending">本月跳过</span></div></article>`;
     }
     const calculated = sum(source.entries.map((entry) => entry.amount));
     const difference = Number(source.total || 0) - calculated;
@@ -589,40 +623,38 @@ function renderRecognition() {
     const pendingEntries = source.entries.filter((entry) => entry.needsConfirm && !entry.confirmed).length;
     const pendingSourceChecks = Number(source.monthConfirmed === false) + Number(source.totalConfirmed === false);
     const badgeClass = source.total <= 0 || pendingEntries + pendingSourceChecks > 0 ? 'pending' : reconciled ? '' : 'mismatch';
-    const badgeText = source.total <= 0 ? '待填写截图总额' : !reconciled ? `相差 ${yuan(Math.abs(difference))}` : pendingEntries + pendingSourceChecks > 0 ? `还有 ${pendingEntries + pendingSourceChecks} 项待确认` : Math.abs(difference) > 0.01 ? `✓ 统计误差 ${yuan(Math.abs(difference))}` : `✓ 分类合计 ${yuan(calculated)}`;
+    const badgeText = source.total <= 0 ? '待填写截图总额' : !reconciled ? `相差 ${yuanPrecise(Math.abs(difference))}` : pendingEntries + pendingSourceChecks > 0 ? `还有 ${pendingEntries + pendingSourceChecks} 项待确认` : Math.abs(difference) > 0.01 ? `✓ 统计误差 ${yuanPrecise(Math.abs(difference))}` : `✓ 分类合计 ${yuanPrecise(calculated)}`;
     const rows = source.entries.map((entry, entryIndex) => {
       const primaryOptions = [...new Set([...categoryTree.map((group) => group.name), entry.category].filter(Boolean))].map((option) => `<option value="${escapeHtml(option)}" ${option === entry.category ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('');
-      const secondaryOptions = secondaryOptionsFor(entry.category, entry.subcategory).map((option) => `<option value="${escapeHtml(option)}" ${option === entry.subcategory ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('');
+      const secondaryValues = secondaryOptionsFor(entry.category, entry.subcategory);
+      const secondaryOptions = secondaryValues.length ? secondaryValues.map((option) => `<option value="${escapeHtml(option)}" ${option === entry.subcategory ? 'selected' : ''}>${escapeHtml(option)}</option>`).join('') : '<option value="">无二级分类</option>';
       const isOcr = entry.inputMethod === 'ocr';
       const entryNeedsConfirmation = entry.needsConfirm && !entry.confirmed;
       const sourceLabel = entry.parentSource ? `${entry.parentSource} / ${entry.source}` : entry.source;
       return `<tr class="${entryNeedsConfirmation ? 'needs-confirm' : ''}">
-        <td data-label="平台原分类"><b>${escapeHtml(sourceLabel)}</b><br><small style="color:#526278">${isOcr ? `本地OCR${entry.reason ? ` · ${escapeHtml(entry.reason)}` : ''}` : '人工补充'}</small></td>
-        <td class="amount" data-label="金额"><input class="entry-amount-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="number" min="0" step="0.01" value="${entry.amount}" aria-label="修改${escapeHtml(entry.source)}金额" /></td>
-        <td data-label="一级分类"><select class="primary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}一级分类">${primaryOptions}</select></td>
-        <td data-label="二级分类"><select class="secondary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}二级分类">${secondaryOptions}</select></td>
-        <td data-label="是否计入"><label class="include-check"><input type="checkbox" data-include-source="${sourceIndex}" data-include-entry="${entryIndex}" ${entry.include ? 'checked' : ''} />计入</label></td>
-        <td data-label="备注"><input class="entry-note-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="text" maxlength="60" value="${escapeHtml(entry.note || '')}" placeholder="可选备注" aria-label="${escapeHtml(entry.source)}备注" /></td>
-        <td data-label="置信度"><span class="confidence ${isOcr && entry.confidence < 85 ? 'low' : isOcr ? '' : 'manual'}">${isOcr ? `${entry.confidence}%` : '人工'}</span></td>
-        <td data-label="状态">${entryNeedsConfirmation ? `<button class="confirm-action" data-confirm-source="${sourceIndex}" data-confirm-entry="${entryIndex}">请确认</button>` : '<span class="confirmed-mark">✓ 已确认</span>'}</td>
-        <td data-label="操作"><button class="delete-entry" data-delete-source="${sourceIndex}" data-delete-entry="${entryIndex}" aria-label="删除${escapeHtml(entry.source)}">×</button></td>
+        <td class="review-status-cell" data-label="确认状态">${entryNeedsConfirmation ? `<button class="confirm-action" data-confirm-source="${sourceIndex}" data-confirm-entry="${entryIndex}">请确认</button>` : '<span class="confirmed-mark">✓ 已确认</span>'}</td>
+        <td class="review-source-cell" data-label="平台原分类"><b>${escapeHtml(sourceLabel)}</b></td>
+        <td class="amount review-amount-cell" data-label="金额"><input class="entry-amount-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="number" min="0" step="0.01" value="${entry.amount}" aria-label="修改${escapeHtml(entry.source)}金额" /></td>
+        <td class="review-primary-cell" data-label="一级分类"><select class="primary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}一级分类">${primaryOptions}</select></td>
+        <td class="review-secondary-cell" data-label="二级分类"><select class="secondary-select" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" aria-label="${escapeHtml(entry.source)}二级分类" ${secondaryValues.length ? '' : 'disabled'}>${secondaryOptions}</select></td>
+        <td class="review-include-cell" data-label="是否计入"><label class="include-check"><input type="checkbox" data-include-source="${sourceIndex}" data-include-entry="${entryIndex}" ${entry.include ? 'checked' : ''} />计入月报</label></td>
+        <td class="review-note-cell" data-label="备注"><input class="entry-note-input" data-source-index="${sourceIndex}" data-entry-index="${entryIndex}" type="text" maxlength="60" value="${escapeHtml(entry.note || '')}" placeholder="可选备注" aria-label="${escapeHtml(entry.source)}备注" /></td>
+        <td class="review-delete-cell" data-label="操作"><button class="delete-entry" data-delete-source="${sourceIndex}" data-delete-entry="${entryIndex}" aria-label="删除${escapeHtml(entry.source)}">×</button></td>
       </tr>`;
     }).join('');
     const sourceChecks = [
-      source.total > 0 && !reconciled ? `<div class="source-check warning"><span><b>可能存在 OCR 漏项</b><small>当前分类合计比截图总额相差 ${yuan(Math.abs(difference))}；请对照截图，用上方“快速补充截图漏项”添加缺少分类。</small></span></div>` : '',
+      source.total > 0 && !reconciled ? `<div class="source-check warning"><span><b>可能存在 OCR 漏项</b><small>当前分类合计比截图总额相差 ${yuanPrecise(Math.abs(difference))}；请点击“补充截图漏项”添加缺少分类。</small></span></div>` : '',
       source.monthConfirmed === false ? `<div class="source-check warning"><span><b>账单月份需要确认</b><small>${source.detectedMonth ? `识别为 ${source.detectedMonth}，当前复盘月份为 ${state.month}` : '截图中没有可靠识别到月份'}</small></span><button class="confirm-action" data-confirm-source-month="${sourceIndex}">确认属于本月</button></div>` : '',
-      source.totalConfirmed === false ? `<div class="source-check warning"><span><b>平台总支出需要确认</b><small>${source.totalSource === 'category_sum' ? `暂用分类合计 ${yuan(source.total)}` : `本地OCR读取为 ${yuan(source.total)}`}</small></span><button class="confirm-action" data-confirm-source-total="${sourceIndex}">确认总额</button></div>` : '',
+      source.totalConfirmed === false ? `<div class="source-check warning"><span><b>平台总支出需要确认</b><small>${source.totalSource === 'category_sum' ? `暂用分类合计 ${yuanPrecise(source.total)}` : `本地OCR读取为 ${yuanPrecise(source.total)}`}</small></span><button class="confirm-action" data-confirm-source-total="${sourceIndex}">确认总额</button></div>` : '',
       ...(source.warnings || []).map((warning) => `<div class="source-check"><span><b>识别提示</b><small>${escapeHtml(warning)}</small></span></div>`)
     ].filter(Boolean).join('');
     return `<article class="recognition-card">
-      <div class="recognition-heading"><span class="platform-logo" style="background:${source.id === 'wechat' ? '#475569' : '#245fa4'}">${source.id === 'wechat' ? '微' : '支'}</span><strong>${source.name}支出</strong><small>${source.entries.length} 个平台分类项 · 截图总额 ${source.total > 0 ? yuan(source.total) : '待填写'}${source.ocrConfidence ? ` · OCR ${source.ocrConfidence}%` : ''}</small><span class="reconcile-badge ${badgeClass}">${badgeText}</span></div>
+      <div class="recognition-heading"><span class="platform-logo" style="background:${source.id === 'wechat' ? '#475569' : '#245fa4'}">${source.id === 'wechat' ? '微' : '支'}</span><span class="recognition-title"><strong>${source.name}支出</strong><small>${source.entries.length} 个分类项 · 截图总额 ${source.total > 0 ? yuanPrecise(source.total) : '待填写'}</small></span><span class="reconcile-badge ${badgeClass}">${badgeText}</span></div>
+      <div class="platform-review-tools"><label><span>${source.name}截图总支出</span><div class="money-input"><i>¥</i><input data-source-total-index="${sourceIndex}" type="number" min="0" step="0.01" value="${source.total || ''}" placeholder="0.00" aria-label="修改${source.name}截图总支出" /></div></label><button class="button secondary" data-open-manual-entry="${sourceIndex}">＋ 补充${source.name}截图漏项</button></div>
       ${sourceChecks ? `<div class="source-checks">${sourceChecks}</div>` : ''}
-      ${source.entries.length ? `<table class="recognition-table"><thead><tr><th>平台原分类</th><th>金额</th><th>一级分类</th><th>二级分类</th><th>是否计入</th><th>备注</th><th>置信度</th><th>状态</th><th>删除</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="recognition-empty">自动识别没有提取到一级分类。请对照右侧截图手动补充，或返回上传页重新识别。</div>'}
+      ${source.entries.length ? `<table class="recognition-table"><thead><tr><th>确认状态</th><th>平台原分类</th><th>金额</th><th>一级分类</th><th>二级分类</th><th>是否计入</th><th>备注</th><th>删除</th></tr></thead><tbody>${rows}</tbody></table>` : '<div class="recognition-empty">自动识别没有提取到一级分类。请对照右侧截图手动补充，或返回上传页重新识别。</div>'}
     </article>`;
   }).join('');
-  $('#wechatDeclaredTotal').value = state.sources.find((source) => source.id === 'wechat')?.total || '';
-  $('#alipayDeclaredTotal').value = state.sources.find((source) => source.id === 'alipay')?.total || '';
-  state.sources.forEach((source) => { $(`#${source.id}DeclaredTotal`).disabled = !sourceIsActive(source); });
   const activePlatforms = state.sources.filter(sourceIsActive).map((source) => source.id);
   $$('#manualEntryPlatform option').forEach((option) => { option.disabled = !activePlatforms.includes(option.value); });
   if (!activePlatforms.includes($('#manualEntryPlatform').value) && activePlatforms.length) $('#manualEntryPlatform').value = activePlatforms[0];
@@ -660,7 +692,14 @@ function renderCategoryPairControls(primarySelector, secondarySelector, preferre
   const selectedPrimary = preferred.category || primary.value || categoryTree[0]?.name || '其他';
   const primaryNames = [...new Set([...categoryTree.map((group) => group.name), selectedPrimary])];
   primary.innerHTML = selectOptionsMarkup(primaryNames, selectedPrimary);
-  const selectedSecondary = preferred.subcategory || secondary.value || secondaryOptionsFor(selectedPrimary)[0] || '其他';
+  const secondaryValues = secondaryOptionsFor(selectedPrimary, preferred.subcategory || secondary.value);
+  if (!secondaryValues.length) {
+    secondary.innerHTML = '<option value="">无二级分类</option>';
+    secondary.disabled = true;
+    return;
+  }
+  secondary.disabled = false;
+  const selectedSecondary = preferred.subcategory || secondary.value || secondaryValues[0];
   secondary.innerHTML = selectOptionsMarkup(secondaryOptionsFor(selectedPrimary, selectedSecondary), selectedSecondary);
 }
 
@@ -677,9 +716,9 @@ function addManualRecognitionEntry() {
   const source = state.sources.find((item) => item.id === platform);
   if (!source || !sourceIsActive(source)) return showMessage('这个平台本月未上传', '请先返回上传页，为该平台添加至少一张截图。');
   const selectedCategory = $('#manualEntryPrimary').value || '其他';
-  const selectedSubcategory = $('#manualEntrySecondary').value || '其他';
+  const selectedSubcategory = $('#manualEntrySecondary').value || '';
   source.entries.push({
-    id: crypto.randomUUID(), source: sourceName, amount, category: selectedCategory,
+    id: uniqueId(), source: sourceName, amount, category: selectedCategory,
     subcategory: selectedSubcategory, note: $('#manualEntryNote').value.trim(),
     confidence: null, needsConfirm: false, confirmed: true, include: true, inputMethod: 'manual'
   });
@@ -689,6 +728,7 @@ function addManualRecognitionEntry() {
   state.completed = false;
   save();
   renderRecognition();
+  closeDialog('manualEntryDialog');
 }
 
 function renderReviewImages() {
@@ -710,7 +750,7 @@ function reportDataFor(review) {
   const income = sum([...Object.values(review.income || {}), ...(review.customIncome || []).map((item) => item.amount)]);
   const includedEntries = (review.sources || []).flatMap((source) => source.entries.filter((entry) => entry.include).map((entry) => ({ ...entry, platform: source.id })));
   const excludedEntries = (review.sources || []).flatMap((source) => source.entries.filter((entry) => !entry.include).map((entry) => ({ ...entry, platform: source.id })));
-  const extraEntries = (review.extraExpenses || []).map((entry) => ({ source: `${entry.source} · ${entry.note || `${entry.category}/${entry.subcategory || '其他'}`}`, amount: entry.amount, category: entry.category, subcategory: entry.subcategory || '其他', note: entry.note || '', platform: 'other', include: true }));
+  const extraEntries = (review.extraExpenses || []).map((entry) => ({ source: `${entry.source} · ${entry.note || `${entry.category}${entry.subcategory ? `/${entry.subcategory}` : ''}`}`, amount: entry.amount, category: entry.category, subcategory: entry.subcategory || '', note: entry.note || '', platform: 'other', include: true }));
   const allIncluded = [...includedEntries, ...extraEntries];
   const expense = sum(allIncluded.map((entry) => entry.amount));
   const byCategory = allIncluded.reduce((result, entry) => {
@@ -719,7 +759,8 @@ function reportDataFor(review) {
   }, {});
   const bySubcategory = allIncluded.reduce((result, entry) => {
     const primary = entry.category || '其他';
-    const secondary = entry.subcategory || '其他';
+    const secondary = entry.subcategory || '';
+    if (!secondary) return result;
     if (!result[primary]) result[primary] = {};
     result[primary][secondary] = (result[primary][secondary] || 0) + entry.amount;
     return result;
@@ -742,7 +783,7 @@ function reportData() {
 }
 
 const changeRate = (current, previous) => previous ? (current - previous) / previous * 100 : null;
-const changeLabel = (value) => value === null ? '暂无对比' : `${value >= 0 ? '↑' : '↓'} ${Math.abs(value).toFixed(1)}%`;
+const changeLabel = (value) => value === null ? '暂无对比' : `${value >= 0 ? '↑' : '↓'} ${Math.round(Math.abs(value))}%`;
 
 function reportMarkup() {
   const report = reportData();
@@ -769,10 +810,10 @@ function reportMarkup() {
   });
   const overflow = incomeLabels.length ? incomeLabels.at(-1).top - 190 : 0;
   if (overflow > 0) incomeLabels.forEach((item) => { item.top -= overflow; });
-  const incomeLabelMarkup = incomeLabels.map((item) => `<span class="stack-direct-label" style="top:${item.top}px"><i class="${item.key}"></i><b>${item.name}</b><em>${item.percent.toFixed(1)}%</em></span>`).join('');
+  const incomeLabelMarkup = incomeLabels.map((item) => `<span class="stack-direct-label" style="top:${item.top}px"><i class="${item.key}"></i><b>${item.name}</b><em>${Math.round(item.percent)}%</em></span>`).join('');
   const stackedColumns = mixMonths.map((month, index) => {
     const isCurrent = index === mixMonths.length - 1;
-    const segments = incomeMeta.map(([key, name]) => `<div class="stack-segment ${key}" style="height:${month.incomeMix[key]}%" title="${name} ${month.incomeMix[key].toFixed(1)}%"></div>`).join('');
+    const segments = incomeMeta.map(([key, name]) => `<div class="stack-segment ${key}" style="height:${month.incomeMix[key]}%" title="${name} ${Math.round(month.incomeMix[key])}%"></div>`).join('');
     return `<div class="stack-column${isCurrent ? ' current' : ''}">${segments}<span>${month.month}${isCurrent ? '（本月）' : ''}</span>${isCurrent ? `<div class="stack-direct-labels">${incomeLabelMarkup}</div>` : ''}</div>`;
   }).join('');
   const palette = ['#173f70','#245fa4','#4d7fb5','#7399c2','#98b3d0','#bbcbdc','#64748b','#9aa4b1','#cbd5e1','#334155','#d8dee8'];
@@ -814,7 +855,7 @@ function reportMarkup() {
     ${pieParts.map((item) => {
       const lineEndX = item.isRight ? 352 : 68;
       const textX = item.isRight ? lineEndX + 7 : lineEndX - 7;
-      return `<polyline points="${item.midPoint.x.toFixed(1)},${item.midPoint.y.toFixed(1)} ${item.elbowPoint.x.toFixed(1)},${item.labelY.toFixed(1)} ${lineEndX},${item.labelY.toFixed(1)}" fill="none" stroke="${item.color}" stroke-width="1.4"></polyline><text x="${textX}" y="${item.labelY + 3}" text-anchor="${item.isRight ? 'start' : 'end'}"><tspan class="pie-label-name">${escapeHtml(item.name)}</tspan><tspan class="pie-label-percent"> ${item.percent.toFixed(1)}%</tspan></text>`;
+      return `<polyline points="${item.midPoint.x.toFixed(1)},${item.midPoint.y.toFixed(1)} ${item.elbowPoint.x.toFixed(1)},${item.labelY.toFixed(1)} ${lineEndX},${item.labelY.toFixed(1)}" fill="none" stroke="${item.color}" stroke-width="1.4"></polyline><text x="${textX}" y="${item.labelY + 3}" text-anchor="${item.isRight ? 'start' : 'end'}"><tspan class="pie-label-name">${escapeHtml(item.name)}</tspan><tspan class="pie-label-percent"> ${Math.round(item.percent)}%</tspan></text>`;
     }).join('')}
   </svg>`;
   const changeItems = [...new Set([...Object.keys(YEAR_AGO.categories || {}), ...Object.keys(report.byCategory)])].map((name) => {
@@ -835,16 +876,16 @@ function reportMarkup() {
       return { name, current, previous, delta, rate };
     }).sort((a, b) => b.current - a.current);
     const hasChildren = childItems.length > 0;
-    const parentRow = `<tr class="category-main-row"><td><button type="button" class="category-expand-button" data-toggle-category="${categoryIndex}" aria-expanded="false" ${hasChildren ? '' : 'disabled'}><span class="category-chevron">›</span><b>${escapeHtml(item.name)}</b><small>${childItems.length} 个二级分类</small></button></td><td>${yuan(item.current)}</td><td>${YEAR_AGO.income ? yuan(item.previous) : '暂无数据'}</td><td class="${item.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? `${item.delta >= 0 ? '↑' : '↓'} ${yuan(Math.abs(item.delta))}` : '—'}</td><td class="${item.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? (item.rate === null ? '新增' : `${item.rate >= 0 ? '+' : ''}${item.rate.toFixed(1)}%`) : '—'}</td></tr>`;
-    const childRows = childItems.map((child) => `<tr class="subcategory-row" data-category-group="${categoryIndex}" hidden><td><span class="subcategory-name">${escapeHtml(child.name)}</span></td><td>${yuan(child.current)}</td><td>${YEAR_AGO.income ? yuan(child.previous) : '暂无数据'}</td><td class="${child.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? `${child.delta >= 0 ? '↑' : '↓'} ${yuan(Math.abs(child.delta))}` : '—'}</td><td class="${child.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? (child.rate === null ? '新增' : `${child.rate >= 0 ? '+' : ''}${child.rate.toFixed(1)}%`) : '—'}</td></tr>`).join('');
+    const parentRow = `<tr class="category-main-row"><td data-label="分类"><button type="button" class="category-expand-button" data-toggle-category="${categoryIndex}" aria-expanded="false" ${hasChildren ? '' : 'disabled'}><span class="category-chevron">›</span><b>${escapeHtml(item.name)}</b><small>${childItems.length} 个二级分类</small></button></td><td data-label="本月">${yuan(item.current)}</td><td data-label="去年同月">${YEAR_AGO.income ? yuan(item.previous) : '暂无数据'}</td><td data-label="变动金额" class="${item.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? `${item.delta >= 0 ? '↑' : '↓'} ${yuan(Math.abs(item.delta))}` : '—'}</td><td data-label="同比" class="${item.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? (item.rate === null ? '新增' : `${item.rate >= 0 ? '+' : ''}${Math.round(item.rate)}%`) : '—'}</td></tr>`;
+    const childRows = childItems.map((child) => `<tr class="subcategory-row" data-category-group="${categoryIndex}" hidden><td data-label="分类"><span class="subcategory-name">${escapeHtml(child.name)}</span></td><td data-label="本月">${yuan(child.current)}</td><td data-label="去年同月">${YEAR_AGO.income ? yuan(child.previous) : '暂无数据'}</td><td data-label="变动金额" class="${child.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? `${child.delta >= 0 ? '↑' : '↓'} ${yuan(Math.abs(child.delta))}` : '—'}</td><td data-label="同比" class="${child.delta >= 0 ? 'change-up' : 'change-down'}">${YEAR_AGO.income ? (child.rate === null ? '新增' : `${child.rate >= 0 ? '+' : ''}${Math.round(child.rate)}%`) : '—'}</td></tr>`).join('');
     return parentRow + childRows;
   }).join('');
   return `<div class="report-kpis">
-    <article class="report-kpi"><span>收入总额</span><strong>${yuan(report.income)}</strong><small>本月手动确认收入</small><div class="change-pills"><span class="change-pill">环比 ${changeLabel(incomeMoM)}</span><span class="change-pill">同比 ${changeLabel(incomeYoY)}</span></div></article>
-    <article class="report-kpi"><span>支出总额</span><strong>${yuan(report.expense)}</strong><small>已上传平台＋其他支出补充</small><div class="change-pills"><span class="change-pill">环比 ${changeLabel(expenseMoM)}</span><span class="change-pill">同比 ${changeLabel(expenseYoY)}</span></div></article>
-    <article class="report-kpi primary"><span>本月结余</span><strong>${yuan(report.surplus)}</strong><small>结余率 ${report.rate.toFixed(1)}%</small><div class="change-pills"><span class="change-pill">收入减去全部支出</span></div></article>
+    <article class="report-kpi income"><span>收入总额</span><strong>${yuan(report.income)}</strong><small>本月手动确认收入</small><div class="change-pills"><span class="change-pill">环比 ${changeLabel(incomeMoM)}</span><span class="change-pill">同比 ${changeLabel(incomeYoY)}</span></div></article>
+    <article class="report-kpi expense"><span>支出总额</span><strong>${yuan(report.expense)}</strong><small>已上传平台＋其他支出补充</small><div class="change-pills"><span class="change-pill">环比 ${changeLabel(expenseMoM)}</span><span class="change-pill">同比 ${changeLabel(expenseYoY)}</span></div></article>
+    <article class="report-kpi surplus"><span>本月结余</span><strong>${yuan(report.surplus)}</strong><small>结余率 ${Math.round(report.rate)}%</small><div class="change-pills"><span class="change-pill">收入减去全部支出</span></div></article>
   </div>
-  <article class="sankey-card"><div class="report-card-head"><div><h3>家庭资金流向</h3><p>收入来源汇入本月总收入，再分流为支出与结余。</p></div><small>桑基图 · 金额越大，流线越宽</small></div><div class="sankey-wrap"><canvas id="cashflowSankey" aria-label="收入、支出与结余桑基图"></canvas></div></article>
+  <article class="sankey-card"><div class="report-card-head"><div><h3>家庭资金流向</h3><p>收入来源汇入本月总收入，再按支出一级分类与结余分流。</p></div><small>桑基图 · 标签直接显示金额</small></div><div class="sankey-wrap"><canvas id="cashflowSankey" aria-label="收入、一级支出分类与结余桑基图"></canvas></div></article>
   <div class="analysis-grid">
     <article class="analysis-card"><div class="report-card-head"><div><h3>收入结构</h3><p>各类收入占当月收入的百分比。</p></div><small>100% 堆积柱状图</small></div><div class="stacked-chart">${stackedColumns}</div><div class="chart-legend"><span><i style="background:#173f70"></i>工资</span><span><i style="background:#477ab2"></i>副业</span><span><i style="background:#87a9cd"></i>投资理财</span><span><i style="background:#c6d5e5"></i>其他</span></div></article>
     <article class="analysis-card"><div class="report-card-head"><div><h3>支出结构</h3><p>本月统一一级分类占比；较小分类合并为“其他分类”。</p></div><small>饼图 · 类别与占比直接标注</small></div><div class="pie-chart-wrap">${expensePieSvg}</div></article>
@@ -864,7 +905,7 @@ function renderReports() {
 function renderExtraExpenses() {
   const total = sum(state.extraExpenses.map((entry) => entry.amount));
   $('#extraExpenseTotal').textContent = yuan(total);
-  $('#extraExpenseList').innerHTML = state.extraExpenses.length ? state.extraExpenses.map((entry, index) => `<div class="extra-expense-item"><div><b>${escapeHtml(entry.category)} / ${escapeHtml(entry.subcategory || '其他')} · ${escapeHtml(entry.source)}</b><small>${escapeHtml(entry.note || '无备注')}</small></div><strong>${yuan(entry.amount)}</strong><button class="delete-extra" data-delete-extra="${index}" aria-label="删除补充记录">×</button></div>`).join('') : '<div class="empty-state">目前没有补充记录</div>';
+  $('#extraExpenseList').innerHTML = state.extraExpenses.length ? state.extraExpenses.map((entry, index) => `<div class="extra-expense-item"><div><b>${escapeHtml(entry.category)}${entry.subcategory ? ` / ${escapeHtml(entry.subcategory)}` : ''} · ${escapeHtml(entry.source)}</b><small>${escapeHtml(entry.note || '无备注')}</small></div><strong>${yuan(entry.amount)}</strong><button class="delete-extra" data-delete-extra="${index}" aria-label="删除补充记录">×</button></div>`).join('') : '<div class="empty-state">目前没有补充记录</div>';
   renderProgress();
 }
 
@@ -919,39 +960,59 @@ function drawSankey(report) {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
   const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
-  const w = rect.width, h = rect.height, nodeW = 12, usable = Math.min(238, h - 64), centerX = w * .49, rightX = w - 112, leftX = 112;
+  const w = rect.width, h = rect.height, nodeW = 10, usable = Math.min(260, h - 50);
+  const compact = w < 600;
+  const centerX = w * .5, leftX = compact ? 104 : 138, rightX = w - (compact ? 104 : 138);
   const incomeItems = [
     ['工资', report.incomeMix.salary, '#173f70'], ['副业', report.incomeMix.side, '#477ab2'],
     ['投资理财', report.incomeMix.investment, '#87a9cd'], ['其他收入', report.incomeMix.other, '#c6d5e5']
   ].filter((item) => item[1] > 0);
-  const total = Math.max(report.income, 1), gap = 10;
-  const scale = (usable - gap * (incomeItems.length - 1)) / total;
-  let leftY = (h - (usable - gap * (incomeItems.length - 1) + gap * (incomeItems.length - 1))) / 2;
-  let centerY = (h - usable) / 2;
+  const expenseSource = Object.entries(report.byCategory).sort((a, b) => b[1] - a[1]);
+  const expenseItems = expenseSource.slice(0, 6).map(([name, value], index) => [name, value, ['#d85b66','#df6d76','#e47f87','#e99197','#eda4a9','#f1b7bb'][index]]);
+  const remainingExpense = sum(expenseSource.slice(6).map(([, value]) => value));
+  if (remainingExpense > 0) expenseItems.push(['其他分类', remainingExpense, '#c87b83']);
+  const rightItems = [...expenseItems];
+  if (report.surplus > 0) rightItems.push(['结余', report.surplus, '#2f8a62']);
+  const flowTotal = Math.max(report.income, report.expense, 1);
+  const gap = compact ? 7 : 9;
+  const largestGapCount = Math.max(0, incomeItems.length - 1, rightItems.length - 1);
+  const flowHeight = Math.max(90, usable - gap * largestGapCount);
+  const scale = flowHeight / flowTotal;
+  const centerTop = (h - flowHeight) / 2;
+  const labelFont = compact ? 9 : 10;
+  const amountLabel = (name, value) => `${name} ¥${Math.round(value).toLocaleString('zh-CN')}`;
   const flow = (x1, y1a, y1b, x2, y2a, y2b, color) => {
     const curve = (x2 - x1) * .46;
     ctx.beginPath(); ctx.moveTo(x1, y1a); ctx.bezierCurveTo(x1 + curve, y1a, x2 - curve, y2a, x2, y2a); ctx.lineTo(x2, y2b); ctx.bezierCurveTo(x2 - curve, y2b, x1 + curve, y1b, x1, y1b); ctx.closePath(); ctx.fillStyle = color; ctx.fill();
   };
-  ctx.font = '11px "Microsoft YaHei", sans-serif'; ctx.textBaseline = 'middle';
+  const groupTop = (items) => {
+    const height = sum(items.map(([, value]) => Math.max(3, value * scale))) + Math.max(0, items.length - 1) * gap;
+    return (h - height) / 2;
+  };
+  ctx.font = `${labelFont}px Inter, "PingFang SC", "Microsoft YaHei", sans-serif`; ctx.textBaseline = 'middle';
+  let leftY = groupTop(incomeItems);
+  let leftCenterY = centerTop;
   incomeItems.forEach(([name, value, color]) => {
     const thickness = Math.max(3, value * scale);
-    flow(leftX + nodeW, leftY, leftY + thickness, centerX, centerY, centerY + thickness, `${color}66`);
+    flow(leftX + nodeW, leftY, leftY + thickness, centerX, leftCenterY, leftCenterY + thickness, `${color}66`);
     ctx.fillStyle = color; ctx.fillRect(leftX, leftY, nodeW, thickness);
-    ctx.fillStyle = '#334155'; ctx.textAlign = 'right'; ctx.fillText(name, leftX - 8, leftY + thickness / 2);
-    ctx.fillStyle = '#64748b'; ctx.font = '9px "Microsoft YaHei", sans-serif'; ctx.fillText(yuan(value), leftX - 8, leftY + thickness / 2 + 14); ctx.font = '11px "Microsoft YaHei", sans-serif';
-    leftY += thickness + gap; centerY += thickness;
+    ctx.fillStyle = '#334155'; ctx.textAlign = 'right'; ctx.fillText(amountLabel(name, value), leftX - 7, leftY + thickness / 2);
+    leftY += thickness + gap; leftCenterY += thickness;
   });
-  const totalY = (h - usable) / 2; ctx.fillStyle = '#245fa4'; ctx.fillRect(centerX, totalY, nodeW, usable);
-  ctx.fillStyle = '#111827'; ctx.textAlign = 'center'; ctx.font = '700 11px "Microsoft YaHei", sans-serif'; ctx.fillText('本月总收入', centerX + nodeW / 2, totalY - 16); ctx.font = '10px "Microsoft YaHei", sans-serif'; ctx.fillText(yuan(report.income), centerX + nodeW / 2, totalY + usable + 16);
-  const expenseRatio = Math.min(report.expense / total, 1), expenseH = usable * expenseRatio, surplusH = Math.max(0, usable - expenseH), rightGap = surplusH > 0 ? 14 : 0;
-  const adjustedExpenseH = Math.max(4, expenseH - rightGap / 2), adjustedSurplusH = Math.max(0, surplusH - rightGap / 2);
-  flow(centerX + nodeW, totalY, totalY + adjustedExpenseH, rightX, totalY, totalY + adjustedExpenseH, '#d85b6666');
-  ctx.fillStyle = '#d85b66'; ctx.fillRect(rightX, totalY, nodeW, adjustedExpenseH); ctx.fillStyle = '#a33a46'; ctx.textAlign = 'left'; ctx.font = '11px "Microsoft YaHei", sans-serif'; ctx.fillText('支出', rightX + 20, totalY + adjustedExpenseH / 2 - 7); ctx.font = '9px "Microsoft YaHei", sans-serif'; ctx.fillText(yuan(report.expense), rightX + 20, totalY + adjustedExpenseH / 2 + 8);
-  if (adjustedSurplusH > 0) {
-    const sy = totalY + adjustedExpenseH + rightGap;
-    flow(centerX + nodeW, totalY + adjustedExpenseH, totalY + usable, rightX, sy, sy + adjustedSurplusH, '#2f8a6266');
-    ctx.fillStyle = '#2f8a62'; ctx.fillRect(rightX, sy, nodeW, adjustedSurplusH); ctx.fillStyle = '#1f6a49'; ctx.font = '11px "Microsoft YaHei", sans-serif'; ctx.fillText('结余', rightX + 20, sy + adjustedSurplusH / 2 - 7); ctx.font = '9px "Microsoft YaHei", sans-serif'; ctx.fillText(yuan(report.surplus), rightX + 20, sy + adjustedSurplusH / 2 + 8);
-  }
+  ctx.fillStyle = '#245fa4'; ctx.fillRect(centerX, centerTop, nodeW, flowHeight);
+  ctx.fillStyle = '#173f70'; ctx.textAlign = 'center'; ctx.font = `700 ${compact ? 10 : 11}px Inter, "PingFang SC", "Microsoft YaHei", sans-serif`;
+  ctx.fillText(`总收入 ¥${Math.round(report.income).toLocaleString('zh-CN')}`, centerX + nodeW / 2, centerTop - 14);
+  ctx.font = `${labelFont}px Inter, "PingFang SC", "Microsoft YaHei", sans-serif`;
+  let rightY = groupTop(rightItems);
+  let rightCenterY = centerTop;
+  rightItems.forEach(([name, value, color]) => {
+    const thickness = Math.max(3, value * scale);
+    flow(centerX + nodeW, rightCenterY, rightCenterY + thickness, rightX, rightY, rightY + thickness, `${color}66`);
+    ctx.fillStyle = color; ctx.fillRect(rightX, rightY, nodeW, thickness);
+    ctx.fillStyle = name === '结余' ? '#1f6a49' : '#a33a46'; ctx.textAlign = 'left';
+    ctx.fillText(amountLabel(name, value), rightX + 17, rightY + thickness / 2);
+    rightY += thickness + gap; rightCenterY += thickness;
+  });
 }
 
 function renderOverviewHistory() {
@@ -960,13 +1021,13 @@ function renderOverviewHistory() {
   const max = Math.max(...months.map((item) => item.income), 1);
   $('#overviewHistoryBars').innerHTML = months.map((item) => `<div class="history-bar-group"><i class="income" style="height:${item.income / max * 100}%" title="收入 ${yuan(item.income)}"></i><i class="expense" style="height:${item.expense / max * 100}%" title="支出 ${yuan(item.expense)}"></i><span>${item.month}</span></div>`).join('');
   $('#historyCumulative').textContent = yuan(sum(months.map((item) => item.income - item.expense)));
-  $('#historyAverageRate').textContent = `${(sum(months.map((item) => item.income ? (item.income - item.expense) / item.income * 100 : 0)) / months.length).toFixed(1)}%`;
+  $('#historyAverageRate').textContent = `${Math.round(sum(months.map((item) => item.income ? (item.income - item.expense) / item.income * 100 : 0)) / months.length)}%`;
   $('#historyHighestExpense').textContent = months.reduce((highest, item) => item.expense > highest.expense ? item : highest, months[0]).month;
   const records = [...allReviews.filter((review) => review.month !== state.month), state].sort((a, b) => b.month.localeCompare(a.month));
   $('#historyLedger').innerHTML = records.length ? records.map((review) => {
     const report = reportDataFor(review);
     const isCurrent = review.month === state.month;
-    return `<button class="month-record ${isCurrent ? 'current' : ''}" data-open-review-month="${review.month}"><span><b>${monthShortLabel(review.month)}</b><small>${review.completed ? '已完成' : '进行中'}</small></span><span><b>${review.completed ? `结余 ${yuan(report.surplus)}` : '继续复盘'}</b><small>${review.completed ? `结余率 ${report.rate.toFixed(1)}%` : '打开 →'}</small></span></button>`;
+    return `<button class="month-record ${isCurrent ? 'current' : ''}" data-open-review-month="${review.month}"><span><b>${monthShortLabel(review.month)}</b><small>${review.completed ? '已完成' : '进行中'}</small></span><span><b>${review.completed ? `结余 ${yuan(report.surplus)}` : '继续复盘'}</b><small>${review.completed ? `结余率 ${Math.round(report.rate)}%` : '打开 →'}</small></span></button>`;
   }).join('') : '<div class="empty-state">完成第一个月份后，这里会形成历史档案。</div>';
 }
 
@@ -996,20 +1057,20 @@ function showGuide(platform) {
   $('#guideEyebrow').textContent = isWechat ? '微信截图指引' : '支付宝截图指引';
   $('#guideTitle').textContent = isWechat ? '如何获取微信支出汇总截图' : '如何获取支付宝支出汇总截图';
   const steps = isWechat ? [
-    ['进入账单统计', '微信 → 我 → 服务 → 钱包 → 账单 → 统计'],
-    ['选择月份与支出', '切换到需要复盘的月份，并选择“支出”'],
-    ['展开全部分类', '确保页面包含月份、共支出和全部分类金额'],
-    ['截取长截图', '截到“收起”为止，下方“每日对比”不需要上传']
+    ['打开微信记账本', '在微信中搜索“微信记账本”小程序并进入'],
+    ['选择“统计”页面', '在微信记账本下方选择“统计”页面'],
+    ['选择月份与支出', '切换到需要复盘的月份并选择“支出”，核对平台自动分类是否正确'],
+    ['获取完整截图', '获取长截图，或按从上到下的顺序分多张截图；截取至“每日统计”上方即可']
   ] : [
     ['进入月度账单统计', '支付宝 → 我的 → 账单 → 收支分析 → 月度账单'],
     ['打开支出分类', '选择需要复盘的月份，并切换到“支出分类”'],
-    ['保留当前展开状态', '一级分类和已展开的浅蓝色二级明细都可以识别，不必逐项调整'],
+    ['保留浅蓝色二级分类', '建议保留已展开的浅蓝色二级分类，系统可以识别并用于核对'],
     ['截取完整分类', '截图应包含月份和所有分类；不支持长截图可按从上到下顺序上传多张']
   ];
   const preview = isWechat
-    ? '<div class="capture-preview wechat-preview"><div class="capture-preview-head"><span>2026年8月</span><b>共支出 ¥2,715.40</b></div><div class="capture-preview-row"><span>餐饮</span><b>¥1,577.18</b></div><div class="capture-preview-row"><span>交通</span><b>¥509.40</b></div><div class="capture-preview-row muted"><span>……全部分类直到列表结束</span></div></div>'
-    : '<div class="capture-preview alipay-preview"><div class="capture-preview-head"><span>2026年8月 · 支出分类</span><b>月度账单</b></div><div class="capture-preview-row"><span>1. 餐饮美食</span><b>¥719.78</b></div><div class="capture-preview-sub"><span>正餐 ¥613.49</span><span>咖啡奶茶 ¥101.30</span></div><div class="capture-preview-row muted"><span>……全部分类直到列表结束</span></div></div>';
-  $('#guideContent').innerHTML = `<div class="guide-layout"><div class="guide-steps">${steps.map(([title, copy], index) => `<div class="guide-step"><span>${index + 1}</span><div><b>${title}</b><small>${copy}</small></div></div>`).join('')}</div><div><span class="guide-example-label">合格截图示意（虚构金额）</span>${preview}<div class="guide-privacy">只上传分类汇总；请勿上传含交易对象、商品名称或账号信息的逐笔明细。</div></div></div><div class="guide-tip">${isWechat ? '如果分多张截图上传，第一张请尽量包含月份和总支出，并按从上到下的顺序选择。' : '展开二级分类时，系统会先核对二级合计与一级总额；无法核对时保留一级总额并要求人工确认。'}</div>`;
+    ? '<a class="guide-image-link" href="assets/guides/wechat-upload-guide-v1.png" target="_blank" rel="noopener"><img class="guide-example-image" src="assets/guides/wechat-upload-guide-v1.png" alt="脱敏后的微信合格支出汇总截图示例" /><small>点击查看完整长图</small></a>'
+    : '<a class="guide-image-link" href="assets/guides/alipay-upload-guide-v2.png" target="_blank" rel="noopener"><img class="guide-example-image" src="assets/guides/alipay-upload-guide-v2.png" alt="脱敏后的支付宝合格支出分类截图示例" /><small>点击查看完整长图</small></a>';
+  $('#guideContent').innerHTML = `<div class="guide-layout"><div class="guide-steps">${steps.map(([title, copy], index) => `<div class="guide-step"><span>${index + 1}</span><div><b>${title}</b><small>${copy}</small></div></div>`).join('')}</div><div><span class="guide-example-label">合格截图示意 · 金额已脱敏</span>${preview}<div class="guide-privacy">只上传分类汇总；请勿上传含交易对象、商品名称或账号信息的逐笔明细。</div></div></div><div class="guide-tip">${isWechat ? '如果分多张截图上传，第一张请尽量包含月份和总支出，并按从上到下的顺序选择。' : '建议保留浅蓝色二级分类；系统会核对二级合计与一级总额，无法核对时保留一级总额并要求人工确认。'}</div>`;
   FinanceDB.addEvent('screenshot_guide_opened', { month: state.month, platform }).catch(() => {});
   openDialog('guideDialog');
 }
@@ -1042,10 +1103,10 @@ function currentMonthCsv() {
     if (Number(item.amount) > 0) rows.push([state.month, '收入', '手动填写', item.name, item.name, '', Number(item.amount).toFixed(2), '是', '手动', '']);
   });
   (state.sources || []).forEach((source) => source.entries.forEach((entry) => rows.push([
-    state.month, '支出', source.name, entry.source, entry.category, entry.subcategory || '其他', Number(entry.amount || 0).toFixed(2), entry.include ? '是' : '否', entry.inputMethod === 'ocr' ? '截图识别' : '手动补充', entry.note || ''
+    state.month, '支出', source.name, entry.source, entry.category, entry.subcategory || '', Number(entry.amount || 0).toFixed(2), entry.include ? '是' : '否', entry.inputMethod === 'ocr' ? '截图识别' : '手动补充', entry.note || ''
   ])));
   (state.extraExpenses || []).forEach((entry) => rows.push([
-    state.month, '支出', entry.source, '', entry.category, entry.subcategory || '其他', Number(entry.amount || 0).toFixed(2), '是', '平台外补充', entry.note || ''
+    state.month, '支出', entry.source, '', entry.category, entry.subcategory || '', Number(entry.amount || 0).toFixed(2), '是', '平台外补充', entry.note || ''
   ]));
   return `\ufeff${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
 }
@@ -1200,18 +1261,6 @@ $('#extraExpensePrimary').addEventListener('change', () => {
   const category = $('#extraExpensePrimary').value;
   renderCategoryPairControls('#extraExpensePrimary', '#extraExpenseSecondary', { category, subcategory: secondaryOptionsFor(category)[0] });
 });
-['wechat', 'alipay'].forEach((platform) => {
-  $(`#${platform}DeclaredTotal`).addEventListener('change', (event) => {
-    const source = state.sources.find((item) => item.id === platform);
-    source.total = Number(event.target.value || 0);
-    source.totalConfirmed = source.total > 0;
-    source.totalSource = 'manual';
-    state.completed = false;
-    FinanceDB.addEvent('ocr_total_corrected', { month: state.month, platform }).catch(() => {});
-    save();
-    renderRecognition();
-  });
-});
 $('#addExtraExpense').addEventListener('click', addExtraExpense);
 $('#completeReviewButton').addEventListener('click', () => completeReview().catch((error) => showMessage('无法完成本月复盘', error.message)));
 $('#extraExpenseList').addEventListener('click', (event) => {
@@ -1224,12 +1273,23 @@ $('#extraExpenseList').addEventListener('click', (event) => {
 });
 
 $('#recognitionTables').addEventListener('change', (event) => {
+  if (event.target.matches('[data-source-total-index]')) {
+    const source = state.sources[Number(event.target.dataset.sourceTotalIndex)];
+    source.total = Number(event.target.value || 0);
+    source.totalConfirmed = source.total > 0;
+    source.totalSource = 'manual';
+    state.completed = false;
+    FinanceDB.addEvent('ocr_total_corrected', { month: state.month, platform: source.id }).catch(() => {});
+    save();
+    renderRecognition();
+    return;
+  }
   let entry;
   let field;
   if (event.target.matches('.primary-select')) {
     entry = state.sources[Number(event.target.dataset.sourceIndex)].entries[Number(event.target.dataset.entryIndex)];
     entry.category = event.target.value;
-    entry.subcategory = secondaryOptionsFor(entry.category)[0] || '其他';
+    entry.subcategory = secondaryOptionsFor(entry.category)[0] || '';
     field = 'category';
   }
   if (event.target.matches('.secondary-select')) {
@@ -1270,6 +1330,14 @@ $('#recognitionTables').addEventListener('change', (event) => {
 });
 
 $('#recognitionTables').addEventListener('click', (event) => {
+  const manualEntryButton = event.target.closest('[data-open-manual-entry]');
+  if (manualEntryButton) {
+    const source = state.sources[Number(manualEntryButton.dataset.openManualEntry)];
+    $('#manualEntryPlatform').value = source.id;
+    renderManualCategoryControls();
+    openDialog('manualEntryDialog');
+    return;
+  }
   const entryConfirm = event.target.closest('[data-confirm-source]');
   if (entryConfirm) {
     const sourceIndex = Number(entryConfirm.dataset.confirmSource);
@@ -1355,10 +1423,10 @@ $('#cloudFallbackToggle').addEventListener('change', (event) => {
 
 function renderCategoryTreeEditor() {
   const summary = $('#categoryTreeSummary');
-  if (summary) summary.innerHTML = categoryTree.map((group) => `<span>${escapeHtml(group.name)} <small>${group.children.length} 个二级</small></span>`).join('');
+  if (summary) summary.innerHTML = categoryTree.map((group) => `<section class="category-summary-item"><strong>${escapeHtml(group.name)}</strong>${group.children.length ? `<p>${group.children.map(escapeHtml).join('、')}</p>` : ''}</section>`).join('');
   const editor = $('#categoryTreeEditor');
   if (!editor) return;
-  editor.innerHTML = categoryTree.map((group, groupIndex) => `<section class="category-tree-group"><div><b>${escapeHtml(group.name)}</b><button type="button" data-delete-primary="${groupIndex}" aria-label="删除一级分类${escapeHtml(group.name)}">删除一级</button></div><p>${group.children.map((child, childIndex) => `<span>${escapeHtml(child)}<button type="button" data-delete-secondary="${childIndex}" data-primary-index="${groupIndex}" aria-label="删除二级分类${escapeHtml(child)}">×</button></span>`).join('')}</p></section>`).join('');
+  editor.innerHTML = categoryTree.map((group, groupIndex) => `<section class="category-tree-group"><div><b>${escapeHtml(group.name)}</b><button type="button" data-delete-primary="${groupIndex}" aria-label="删除一级分类${escapeHtml(group.name)}">删除一级</button></div>${group.children.length ? `<p>${group.children.map((child, childIndex) => `<span>${escapeHtml(child)}<button type="button" data-delete-secondary="${childIndex}" data-primary-index="${groupIndex}" aria-label="删除二级分类${escapeHtml(child)}">×</button></span>`).join('')}</p>` : ''}</section>`).join('');
 }
 
 async function persistCategoryTree() {
@@ -1375,14 +1443,14 @@ async function persistCategoryTree() {
 
 $('#saveCustomCategory').addEventListener('click', () => {
   const primaryName = $('#customPrimaryName').value.trim().slice(0, 12);
-  const secondaryName = ($('#customSecondaryName').value.trim() || '其他').slice(0, 16);
+  const secondaryName = $('#customSecondaryName').value.trim().slice(0, 16);
   if (!primaryName) return showMessage('请填写一级分类', '例如“吃”“宠物”或你自己的分类名称。');
   let group = categoryTree.find((item) => item.name === primaryName);
   if (!group) {
     group = { name: primaryName, children: [] };
     categoryTree.push(group);
   }
-  if (!group.children.includes(secondaryName)) group.children.push(secondaryName);
+  if (secondaryName && !group.children.includes(secondaryName)) group.children.push(secondaryName);
   $('#customPrimaryName').value = '';
   $('#customSecondaryName').value = '';
   persistCategoryTree().catch((error) => showMessage('分类保存失败', error.message));
@@ -1398,7 +1466,6 @@ $('#categoryTreeEditor').addEventListener('click', (event) => {
   const secondaryButton = event.target.closest('[data-delete-secondary]');
   if (secondaryButton) {
     const group = categoryTree[Number(secondaryButton.dataset.primaryIndex)];
-    if (group.children.length === 1) return showMessage('至少保留一个二级分类', '可以先添加新的二级分类，再删除当前这一项。');
     group.children.splice(Number(secondaryButton.dataset.deleteSecondary), 1);
     persistCategoryTree().catch((error) => showMessage('分类保存失败', error.message));
     return;
@@ -1419,6 +1486,10 @@ async function initializeApplication() {
   if (Number(categorySchemaSetting?.value || 0) < CATEGORY_SCHEMA_VERSION) {
     const foodGroup = categoryTree.find((group) => group.name === '吃');
     if (foodGroup && !foodGroup.children.includes('零食')) foodGroup.children.push('零食');
+    ['房租', '房贷', '父母', '人情', '其他'].forEach((name) => {
+      const group = categoryTree.find((item) => item.name === name);
+      if (group) group.children = [];
+    });
     await Promise.all([
       FinanceDB.setSetting('expenseCategoryTree', safeClone(categoryTree)),
       FinanceDB.setSetting('expenseCategorySchemaVersion', CATEGORY_SCHEMA_VERSION)
