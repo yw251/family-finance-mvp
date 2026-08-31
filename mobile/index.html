@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FBFBFA">
+<title>家财月报 · 月度收支复盘（v0.8.0 手机试用版）</title>
+<link rel="stylesheet" href="mobile.css?v=mobile-0.8.0-7">
+
+</head>
+<body>
+
+<!-- ============================================================
+     SVG 图标库（lucide 风格 · 24 viewBox · stroke 2 · currentColor）
+     Spec §8 四类 + 新增功能图标（同一套风格，不混用）
+     ============================================================ -->
+<svg style="display:none" aria-hidden="true">
+  <!-- 导航 -->
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-pie" viewBox="0 0 24 24"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+  <!-- 流程 -->
+  <symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8 7l2-3h4l2 3"/><circle cx="12" cy="13.5" r="3.2"/></symbol>
+  <symbol id="i-image-plus" viewBox="0 0 24 24"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-alert-triangle" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-rotate-cw" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></symbol>
+  <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+  <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-list-checks" viewBox="0 0 24 24"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></symbol>
+  <!-- 数据 -->
+  <symbol id="i-trending-up" viewBox="0 0 24 24"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-trending-down" viewBox="0 0 24 24"><path d="M22 17l-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></symbol>
+  <symbol id="i-arrow-up-right" viewBox="0 0 24 24"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></symbol>
+  <symbol id="i-arrow-down-right" viewBox="0 0 24 24"><path d="m7 7 10 10"/><path d="M17 7v10H7"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+  <symbol id="i-share-2" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></symbol>
+  <symbol id="i-hard-drive" viewBox="0 0 24 24"><path d="M22 12H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><path d="M6 16h.01"/><path d="M10 16h.01"/></symbol>
+  <symbol id="i-refresh-cw" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9c2.12 0 4.07.74 5.62 2L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9c-2.12 0-4.07-.74-5.62-2L3 16"/><path d="M3 21v-5h5"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+  <symbol id="i-github" viewBox="0 0 24 24"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M3 10V8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2"/><circle cx="16" cy="14.5" r="1.4"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M3 11h18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <!-- 分类 -->
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+  <symbol id="i-utensils" viewBox="0 0 24 24"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></symbol>
+  <symbol id="i-shopping-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+  <symbol id="i-bus" viewBox="0 0 24 24"><path d="M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/><path d="M4 12h16"/><path d="M6 18v3"/><path d="M18 18v3"/><path d="M8 16h.01"/><path d="M16 16h.01"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2h-4v-7h-6v7H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-heart-pulse" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"/></symbol>
+  <symbol id="i-graduation-cap" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
+  <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></symbol>
+  <!-- 新增：隐私 / 存储 / 分类 / 导出 / 流程 -->
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2.5"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2.5 4.5 5v6c0 4.5 3.2 8 7.5 10 4.3-2 7.5-5.5 7.5-10V5Z"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M20.6 13.4 12 22l-8-8V4h10l6.6 6.6a2 2 0 0 1 0 2.8Z"/><circle cx="8.5" cy="8.5" r="1.4"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-file-text" viewBox="0 0 24 24"><path d="M14 2.5H6a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8.5Z"/><path d="M14 2.5v6h6M9 13h6M9 17h6"/></symbol>
+  <symbol id="i-banknote" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></symbol>
+  <symbol id="i-credit-card" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></symbol>
+  <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9Z"/></symbol>
+  <symbol id="i-help-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.3-3 4M12 17h.01"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+  <symbol id="i-arrow-left-right" viewBox="0 0 24 24"><path d="M8 3 4 7l4 4M4 7h16M16 21l4-4-4-4M20 17H4"/></symbol>
+  <symbol id="i-percent" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8m-4-6v6M6 3h12v6a6 6 0 0 1-12 0Z"/><path d="M6 5H4a2 2 0 0 0 0 4h2m12-4h2a2 2 0 0 1 0 4h-2"/></symbol>
+</svg>
+<div class="onboard" id="onboard" aria-hidden="true">
+  <div class="ob-inner">
+    <button class="ob-close" id="obClose" aria-label="关闭新手引导" hidden><svg class="icon"><use href="#i-x"/></svg></button>
+    <div class="ob-slides">
+      <section class="ob-slide active" data-ob="1">
+        <div class="ob-logo"><svg class="icon"><use href="#i-receipt"/></svg></div>
+        <h1>家财月报</h1>
+        <p class="ob-sub">每月一次，轻松完成收支盘点</p>
+        <p class="ob-desc">输入收入情况，上传微信、支付宝月度汇总截图，本地识别后人工确认，几分钟生成统一月报。</p>
+        <div class="ob-points">
+          <span><svg class="icon"><use href="#i-lock"/></svg>截图仅在本地识别</span>
+          <span><svg class="icon"><use href="#i-shield"/></svg>数据不出浏览器</span>
+          <span><svg class="icon"><use href="#i-user"/></svg>无需账号</span>
+        </div>
+      </section>
+      <section class="ob-slide" data-ob="2">
+        <div class="ob-logo"><svg class="icon"><use href="#i-list-checks"/></svg></div>
+        <h1>5 步完成月度复盘</h1>
+        <div class="ob-steps">
+          <div class="ob-step"><span><svg class="icon"><use href="#i-wallet"/></svg></span><b>填收入</b><small>四类收入分项</small></div>
+          <div class="ob-step"><span><svg class="icon"><use href="#i-upload"/></svg></span><b>传截图</b><small>微信/支付宝汇总</small></div>
+          <div class="ob-step"><span><svg class="icon"><use href="#i-check"/></svg></span><b>做确认</b><small>只看异常项</small></div>
+          <div class="ob-step"><span><svg class="icon"><use href="#i-banknote"/></svg></span><b>补支出</b><small>银行卡/现金</small></div>
+          <div class="ob-step"><span><svg class="icon"><use href="#i-file-text"/></svg></span><b>看月报</b><small>统一月度报告</small></div>
+        </div>
+      </section>
+      <section class="ob-slide" data-ob="3">
+        <div class="ob-logo"><svg class="icon"><use href="#i-scan"/></svg></div>
+        <h1>开始你的第一次复盘</h1>
+        <p class="ob-desc">可以先体验完整演示数据，熟悉后再创建自己的账本。</p>
+        <div class="ob-choices">
+          <button class="ob-choice primary" id="obDemo"><b>体验演示账本</b><small>直接查看 2026 年 3–8 月完整演示数据，可随时退出</small></button>
+          <button class="ob-choice" id="obOwn"><b>创建我的账本</b><small>从本月开始，自己记录每月收支</small></button>
+        </div>
+      </section>
+    </div>
+    <div class="ob-dots"><i class="on" data-dot="1"></i><i data-dot="2"></i><i data-dot="3"></i></div>
+    <div class="ob-nav" id="obNav"><button class="btn btn-primary ob-next" id="obNext">下一步</button></div>
+  </div>
+</div>
+
+<div class="app">
+<main>
+
+  <!-- ================= 财务概览 ================= -->
+  <section class="page active" id="page-home" role="tabpanel" aria-label="财务概览">
+    <div class="trialbar">
+      <span class="trial-pill"><svg class="icon"><use href="#i-info"/></svg>v0.8.0 手机试用版</span>
+      <span class="trial-pill demo" id="demoPill" hidden></span>
+      <span class="trial-status" id="homeTrialStatus"><span class="dot"></span><span id="homeTrialTxt">2026 年 8 月 · 待完成</span></span>
+    </div>
+    <div class="mode-switch" id="quickModeSwitch" aria-label="切换账本">
+      <button data-quick-mode="demo"><svg class="icon"><use href="#i-scan"/></svg>演示账本</button>
+      <button data-quick-mode="own"><svg class="icon"><use href="#i-user"/></svg>我的账本</button>
+    </div>
+    <div class="brand">
+      <span class="brand-ico"><svg class="icon"><use href="#i-receipt"/></svg></span>
+      <span class="brand-name">家财月报<span class="brand-sub">月度收支复盘</span></span>
+      <span class="brand-loc"><svg class="icon"><use href="#i-lock"/></svg>个人本地版</span>
+    </div>
+
+    <div class="monthbar">
+      <button class="month-arrow" id="homePrev" aria-label="上一个月"><svg class="icon"><use href="#i-chevron-left"/></svg></button>
+      <button class="month-label tnum" id="homeMonthBtn" aria-label="选择月份">2026年8月<span class="month-tag" id="homeMonthTag">约 5-10 分钟完成</span></button>
+      <input type="month" id="homeMonthPicker" style="display:none" aria-hidden="true" />
+      <button class="month-arrow" id="homeNext" aria-label="下一个月"><svg class="icon"><use href="#i-chevron-right"/></svg></button>
+    </div>
+
+    <div id="homeBody"><!-- JS 渲染：进度卡 + CTA + 结余卡 + 趋势 + 档案 --></div>
+
+    <p class="foot-note"><svg class="icon"><use href="#i-lock"/></svg>数据仅保存在当前浏览器 · <button class="link-inline" id="homePrivacyBtn">隐私说明</button></p>
+  </section>
+
+  <!-- ================= 月度复盘（5 步） ================= -->
+  <section class="page page-review" id="page-review" role="tabpanel" aria-label="月度复盘">
+    <div class="phead">
+      <div class="ptitle">月度复盘</div>
+      <button class="pclose" id="reviewClose" aria-label="关闭复盘"><svg class="icon"><use href="#i-x"/></svg></button>
+    </div>
+
+    <div class="dots" aria-label="复盘进度">
+      <div class="track"></div>
+      <div class="track-fill" id="trackFill"></div>
+      <div class="s-item" data-si="1"><div class="s-dot">1</div><span class="s-txt">填收入</span></div>
+      <div class="s-item" data-si="2"><div class="s-dot">2</div><span class="s-txt">传截图</span></div>
+      <div class="s-item" data-si="3"><div class="s-dot">3</div><span class="s-txt">确认结果</span></div>
+      <div class="s-item" data-si="4"><div class="s-dot">4</div><span class="s-txt">补支出</span></div>
+      <div class="s-item" data-si="5"><div class="s-dot">5</div><span class="s-txt">完成</span></div>
+    </div>
+
+    <!-- 步骤1 填收入：四类分项 -->
+    <div class="step-pane show" id="step1">
+      <p class="step-hint">按来源分类填写本月收入，合计自动累加。自己账户间转账、借款到账、退款或报销<b>不算收入</b>。</p>
+      <div class="card inc-card">
+        <div class="inc-head">
+          <div class="ic-badge"><svg class="icon"><use href="#i-wallet"/></svg></div>
+          <div><b>收入分项</b><span>填写实际到账金额（元）</span></div>
+        </div>
+        <div id="incList"><!-- JS 渲染四类 + 自定义 --></div>
+        <div class="inc-add"><button id="addIncCat"><svg class="icon"><use href="#i-plus"/></svg>添加自定义收入分类</button></div>
+      </div>
+      <div class="inc-total">
+        <div class="k"><svg class="icon"><use href="#i-wallet"/></svg>本月收入合计</div>
+        <div class="v tnum" id="incTotal">¥ 0.00</div>
+        <div class="rule"><b>不算收入：</b>自己账户间转账 · 借款到账 · 退款或报销</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-ghost" id="skipIncome">跳过</button>
+        <button class="btn btn-primary" id="toStep2">下一步</button>
+      </div>
+    </div>
+
+    <!-- 步骤2 上传截图 -->
+    <div class="step-pane" id="step2">
+      <p class="step-hint">上传微信、支付宝的<b>月度汇总账单截图</b>，截图仅在本地识别。</p>
+      <div class="card checklist" id="checklistCard">
+        <div class="cl-t"><svg class="icon"><use href="#i-list-checks"/></svg>上传前先核对</div>
+        <div class="cl-i"><span class="ck" data-c="1"><svg class="icon"><use href="#i-check"/></svg></span><span>能看到<b>月份</b>（当月账单汇总页）</span></div>
+        <div class="cl-i"><span class="ck" data-c="2"><svg class="icon"><use href="#i-check"/></svg></span><span>能看到<b>总支出</b>金额</span></div>
+        <div class="cl-i"><span class="ck" data-c="3"><svg class="icon"><use href="#i-check"/></svg></span><span>包含<b>全部分类</b>与金额明细</span></div>
+        <div class="cl-i"><span class="ck" data-c="4"><svg class="icon"><use href="#i-check"/></svg></span><span>平台分类已核对（<em>分类映射规则</em>）</span></div>
+      </div>
+      <div class="card plat" id="platWechat">
+        <div class="plat-head">
+          <div class="plat-ico"><svg class="icon"><use href="#i-receipt"/></svg></div>
+          <div><div class="plat-name">微信支付</div><div class="plat-sub">月度账单截图 · <span class="cnt">0</span>/9 张</div></div>
+          <button class="plat-help" data-guide="wechat" aria-label="微信截图指引">指引</button>
+        </div>
+        <div class="thumb-grid" data-plat="wechat"></div>
+        <button class="upload-add add-shot" data-plat="wechat"><span class="upload-plus"><svg class="icon"><use href="#i-plus"/></svg></span><span><b>添加微信截图</b><small>点击后选择拍照或手机相册</small></span></button>
+        <input class="platform-file-input" id="wechatAlbumFiles" type="file" accept="image/*,.heic,.heif" multiple hidden>
+      </div>
+      <div class="card plat" id="platAlipay">
+        <div class="plat-head">
+          <div class="plat-ico"><svg class="icon"><use href="#i-receipt"/></svg></div>
+          <div><div class="plat-name">支付宝</div><div class="plat-sub">月度账单截图 · <span class="cnt">0</span>/9 张</div></div>
+          <button class="plat-help" data-guide="alipay" aria-label="支付宝截图指引">指引</button>
+        </div>
+        <div class="thumb-grid" data-plat="alipay"></div>
+        <button class="upload-add add-shot" data-plat="alipay"><span class="upload-plus"><svg class="icon"><use href="#i-plus"/></svg></span><span><b>添加支付宝截图</b><small>点击后选择拍照或手机相册</small></span></button>
+        <input class="platform-file-input" id="alipayAlbumFiles" type="file" accept="image/*,.heic,.heif" multiple hidden>
+      </div>
+
+      <p class="privacy"><svg class="icon"><use href="#i-lock"/></svg><span>截图仅在当前浏览器本地识别，不会上传；识别长截图可能需要几十秒。为保护隐私，请勿上传含交易对象、商品名称或账号信息的逐笔明细。</span></p>
+      <div class="btn-row">
+        <button class="btn-ghost" id="backToStep1">上一步</button>
+        <button class="btn btn-primary" id="toStep3" disabled>开始识别</button>
+      </div>
+    </div>
+
+    <!-- 步骤3 确认结果 -->
+    <div class="step-pane" id="step3">
+      <div class="card verify-card">
+        <div class="verify-head">
+          <span class="verify-t"><svg class="icon"><use href="#i-check-circle"/></svg>金额校验</span>
+          <span class="verify-state"><svg class="icon"><use href="#i-check"/></svg>通过</span>
+        </div>
+        <div class="verify-nums"><span>截图总支出</span><b id="vShot">¥ 12,272.00</b><span>识别合计</span><b id="vOcr">¥ 12,274.50</b><span class="diff ok" id="vDiff">差 ¥2.50</span></div>
+        <div class="verify-note">差额小于 ¥10 可作为统计误差通过</div>
+      </div>
+      <div class="sec-title"><svg class="icon"><use href="#i-eye"/></svg>本月截图（点击放大核对）</div>
+      <div class="shot-strip" id="shotStrip"></div>
+      <div id="ocrZone">
+        <div class="card ocr-progress">
+          <div class="ocr-pbar"><span class="spinner" id="ocrSpinner"></span><div class="track"><div class="fill" id="ocrFill" style="width:0%"></div></div><span class="pct tnum" id="ocrPct">0%</span></div>
+          <p class="ocr-tip" id="ocrTip">正在本地识别…识别长截图可能需要几十秒，识别结果可在本页修改任何金额或分类。</p>
+        </div>
+        <div id="ocrList"></div>
+      </div>
+      <div id="confirmZone" hidden>
+        <div class="legend"><span class="lg"><i class="auto"></i>已自动确认</span><span class="lg"><i class="manual"></i>待人工确认</span></div>
+        <div class="confirm-summary"><svg class="icon"><use href="#i-list-checks"/></svg>共 <b id="sumTotal">0</b> 条 · 待人工确认 <b id="sumTodo">0</b> 条，未确认不计入月报</div>
+        <div id="confirmList"></div>
+        <div class="confirm-links">
+          <button class="btn-ghost" id="manageCatBtn"><svg class="icon"><use href="#i-tag"/></svg>管理分类</button>
+          <button class="btn-ghost" id="ruleBtn"><svg class="icon"><use href="#i-help-circle"/></svg>分类规则</button>
+          <button class="btn-ghost" id="msMissingBtn"><svg class="icon"><use href="#i-plus"/></svg>补漏项</button>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn-ghost" id="backToStep2">上一步</button>
+        <button class="btn btn-primary" id="toStep4" disabled>下一步</button>
+      </div>
+    </div>
+
+    <!-- 步骤4 补充支出 -->
+    <div class="step-pane" id="step4">
+      <p class="step-hint">银行卡、现金、其他渠道的支出不会出现在微信/支付宝截图中，可在此<b>手动补充</b>，不会与微信、支付宝金额重复。</p>
+      <div class="card supply">
+        <div class="fld">
+          <label for="supChannel">支出渠道</label>
+          <div class="sel-wrap"><select id="supChannel"><option>银行卡</option><option>现金</option><option>其他渠道</option></select><svg class="icon"><use href="#i-chevron-down"/></svg></div>
+        </div>
+        <div class="fld-row">
+          <div class="fld">
+            <label for="supL1">一级分类</label>
+            <div class="sel-wrap"><select id="supL1"></select><svg class="icon"><use href="#i-chevron-down"/></svg></div>
+          </div>
+          <div class="fld">
+            <label for="supL2">二级分类</label>
+            <div class="sel-wrap"><select id="supL2"></select><svg class="icon"><use href="#i-chevron-down"/></svg></div>
+          </div>
+        </div>
+        <div class="fld-row">
+          <div class="fld">
+            <label for="supAmt">金额（元）</label>
+            <input type="number" id="supAmt" inputmode="decimal" placeholder="0.00">
+          </div>
+          <div class="fld">
+            <label for="supNote">备注</label>
+            <input type="text" id="supNote" placeholder="如：房租、水费">
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block" id="addSupply"><svg class="icon"><use href="#i-plus"/></svg>添加这笔补充</button>
+      </div>
+      <div class="sec-title"><svg class="icon"><use href="#i-banknote"/></svg>已补充记录</div>
+      <div class="card supply-list-card" style="padding:6px 16px">
+        <div id="supplyList"><p class="supply-empty">还没有补充记录</p></div>
+        <div class="supply-sum"><span>补充支出合计</span><b class="tnum" id="supplyTotal">¥ 0.00</b></div>
+        <p class="supply-note"><svg class="icon"><use href="#i-info"/></svg>手动补充不会与微信、支付宝金额重复，仅计一次</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn-ghost" id="backToStep3">上一步</button>
+        <button class="btn btn-primary" id="toStep5">下一步</button>
+      </div>
+    </div>
+
+    <!-- 步骤5 完成 -->
+    <div class="step-pane" id="step5">
+      <div class="done-wrap">
+        <div class="done-check"><svg class="icon"><use href="#i-check"/></svg></div>
+        <h2 id="doneTitle">8月复盘完成</h2>
+        <p class="sub" id="doneSub">已确认 5 条 · 补充支出 0 条 · 数据仅保存在本机</p>
+        <div class="card done-sum">
+          <div class="sum-row"><span>总收入</span><b class="in tnum" id="doneIncome">15,620.00</b></div>
+          <div class="sum-row"><span>总支出</span><b class="out tnum" id="doneExpense">1,796.50</b></div>
+          <div class="sum-row sum-bal"><span>本月结余</span><b class="tnum" id="doneBalance">+13,823.50</b></div>
+        </div>
+        <button class="btn btn-secondary btn-block" id="editReviewData" style="margin-bottom:12px">修改本月数据</button>
+        <button class="btn btn-primary btn-block" id="genReport">生成月报</button>
+        <button class="btn btn-secondary btn-block" id="backHome" style="margin-top:12px">回概览</button>
+      </div>
+    </div>
+  </section>
+  <!-- ================= 月度报告 ================= -->
+  <section class="page" id="page-report" role="tabpanel" aria-label="月度报告">
+    <div class="phead"><div class="ptitle">月度报告</div></div>
+    <div class="mode-switch" aria-label="切换账本">
+      <button data-quick-mode="demo"><svg class="icon"><use href="#i-scan"/></svg>演示账本</button>
+      <button data-quick-mode="own"><svg class="icon"><use href="#i-user"/></svg>我的账本</button>
+    </div>
+    <div class="monthbar">
+      <button class="month-arrow" id="repPrev" aria-label="上一个月"><svg class="icon"><use href="#i-chevron-left"/></svg></button>
+      <button class="month-label tnum" id="repMonthBtn" aria-label="选择月份">2026年8月</button>
+      <input type="month" id="repMonthPicker" style="display:none" aria-hidden="true" />
+      <button class="month-arrow" id="repNext" aria-label="下一个月"><svg class="icon"><use href="#i-chevron-right"/></svg></button>
+    </div>
+    <div class="report-status"><svg class="icon"><use href="#i-refresh-cw"/></svg><span>报告状态：<b>进行中</b> · 数据来自当前浏览器</span><button id="editMonthBtn">编辑本月数据</button></div>
+    <div id="reportBody"><!-- JS 渲染 --></div>
+  </section>
+
+  <!-- ================= 设置与数据 ================= -->
+  <section class="page" id="page-settings" role="tabpanel" aria-label="设置与数据">
+    <div class="phead"><div class="ptitle">你的数据，由你决定</div></div>
+    <div class="mode-switch" aria-label="切换账本">
+      <button data-quick-mode="demo"><svg class="icon"><use href="#i-scan"/></svg>演示账本</button>
+      <button data-quick-mode="own"><svg class="icon"><use href="#i-user"/></svg>我的账本</button>
+    </div>
+
+    <div class="sec-title"><svg class="icon"><use href="#i-lock"/></svg>本地数据</div>
+    <div class="set-sec">
+      <div class="toggle-row">
+        <span class="set-ico"><svg class="icon"><use href="#i-trash-2"/></svg></span>
+        <span class="set-txt"><b>完成确认后删除原始截图</b><em>复盘完成后自动清理已识别截图</em></span>
+        <button class="toggle" id="delShotToggle" role="switch" aria-checked="false" aria-label="完成确认后删除原始截图"></button>
+      </div>
+      <div class="toggle-row">
+        <span class="set-ico accent"><svg class="icon"><use href="#i-shield"/></svg></span>
+        <span class="set-txt"><b>增强本地存储保护</b><em>请求浏览器持久化存储，避免数据被清理</em></span>
+        <span class="storage-pill warn" id="storagePill">未申请</span>
+      </div>
+      <button class="set-row" id="requestStorageBtn" style="border-bottom:none">
+        <span class="set-ico"><svg class="icon"><use href="#i-refresh-cw"/></svg></span>
+        <span class="set-txt"><b>申请存储保护</b><em>调用 navigator.storage.persist()</em></span>
+        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
+      </button>
+    </div>
+
+    <div class="sec-title"><svg class="icon"><use href="#i-tag"/></svg>一级 / 二级分类</div>
+    <div class="set-sec">
+      <button class="set-row" id="manageCatBtn2" style="min-height:58px">
+        <span class="set-ico accent"><svg class="icon"><use href="#i-tag"/></svg></span>
+        <span class="set-txt"><b>管理分类</b><em>新建一级/二级分类、恢复系统预设</em></span>
+        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
+      </button>
+      <div class="cat-tree" id="categoryTreeSummary"></div>
+    </div>
+
+    <div class="sec-title"><svg class="icon"><use href="#i-database"/></svg>备份与恢复</div>
+    <div class="set-sec export-list">
+      <button class="export-item" data-exp="json">
+        <span class="set-ico"><svg class="icon"><use href="#i-database"/></svg></span>
+        <span><b>完整 JSON 备份</b><em>全部账本与设置，跨设备迁移用</em></span>
+      </button>
+      <button class="export-item" data-exp="csv">
+        <span class="set-ico"><svg class="icon"><use href="#i-file-text"/></svg></span>
+        <span><b>本月 CSV 表格</b><em>本月收支明细，可用 Excel / Numbers 打开</em></span>
+      </button>
+      <button class="export-item" data-exp="event">
+        <span class="set-ico"><svg class="icon"><use href="#i-trending-up"/></svg></span>
+        <span><b>试用事件 CSV</b><em>仅流程耗时，不含金额，用于产品体验分析</em></span>
+      </button>
+      <button class="export-item" data-exp="shots">
+        <span class="set-ico"><svg class="icon"><use href="#i-image-plus"/></svg></span>
+        <span><b>本月原始截图下载</b><em>按平台与顺序逐张下载</em></span>
+      </button>
+      <button class="set-row" id="restoreBtn" style="border-bottom:1px solid var(--border-soft)">
+        <span class="set-ico"><svg class="icon"><use href="#i-upload"/></svg></span>
+        <span class="set-txt"><b>从 JSON 备份恢复</b><em>导入后完整恢复全部数据</em></span>
+        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
+      </button>
+      <input id="restoreFile" type="file" accept="application/json,.json" hidden>
+      <button class="set-row" id="resetModeBtn" style="border-bottom:1px solid var(--border-soft)">
+        <span class="set-ico"><svg class="icon"><use href="#i-refresh-cw"/></svg></span>
+        <span class="set-txt"><b>重新选择账本</b><em>返回选择页（演示账本 / 我的账本）</em></span>
+        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
+      </button>
+      <button class="set-row" id="clearBtn" style="border-bottom:none">
+        <span class="set-ico danger"><svg class="icon"><use href="#i-trash-2"/></svg></span>
+        <span class="set-txt danger-txt"><b>清除全部数据</b><em>删除本机全部月报与识别记录</em></span>
+        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
+      </button>
+      <div class="set-warn"><svg class="icon"><use href="#i-alert-triangle"/></svg>本地保存不等于永久备份：浏览器清理、无痕模式、更换设备都可能导致数据丢失，请定期导出 JSON 备份。</div>
+    </div>
+
+    <div class="sec-title"><svg class="icon"><use href="#i-info"/></svg>关于</div>
+    <div class="set-sec">
+      <button class="set-row" id="reobBtn" style="border-bottom:1px solid var(--border-soft)">
+        <span class="set-ico"><svg class="icon"><use href="#i-info"/></svg></span>
+        <span class="set-txt"><b>重新查看新手引导</b><em>再看一遍使用说明</em></span>
+        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
+      </button>
+      <button class="set-row" id="privacyBtn2" style="border-bottom:none">
+        <span class="set-ico"><svg class="icon"><use href="#i-lock"/></svg></span>
+        <span class="set-txt"><b>隐私说明</b><em>不接入支付账户 · 不读取逐笔交易</em></span>
+        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
+      </button>
+    </div>
+    <p class="foot-note"><svg class="icon"><use href="#i-lock"/></svg>家财月报 · 个人本地版，一个链接全家可用</p>
+  </section>
+
+</main>
+</div><!-- /app -->
+
+<!-- 确认浮条（复盘第3步） -->
+<div class="confirm-bar" id="confirmBar">
+  <div class="confirm-inner">
+    <div class="confirm-hint"><b class="tnum" id="confirmCount">确认 5 条</b>未确认条目不计入月报</div>
+    <button class="btn btn-primary" id="confirmGo">确认 5 条</button>
+  </div>
+</div>
+
+<!-- 底部导航：3 Tab + 中央凸起复盘按钮 -->
+<nav class="tabbar" role="tablist" aria-label="底部导航">
+  <button class="tab active" role="tab" aria-selected="true" data-page="home" aria-controls="page-home">
+    <svg class="icon"><use href="#i-home"/></svg><span>概览</span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-page="review" aria-controls="page-review">
+    <svg class="icon"><use href="#i-scan"/></svg><span>盘点</span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-page="report" aria-controls="page-report">
+    <svg class="icon"><use href="#i-pie"/></svg><span>报告</span>
+  </button>
+  <button class="tab" role="tab" aria-selected="false" data-page="settings" aria-controls="page-settings">
+    <svg class="icon"><use href="#i-settings"/></svg><span>设置</span>
+  </button>
+</nav>
+
+<!-- ============================================================
+     Sheets（bottom sheet 系列，手机化呈现）
+     ============================================================ -->
+
+<!-- 1a. 微信截图指引（含线框示意图） -->
+<div class="sheet-layer" id="sheetGuideWx">
+  <div class="sheet-backdrop" data-close="sheetGuideWx"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="微信截图指引">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico"><svg class="icon"><use href="#i-receipt"/></svg></div><h3>微信截图指引</h3><button class="sheet-close" data-close="sheetGuideWx"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="guide-steps"><div class="guide-step"><span>1</span><div><b>打开微信记账本</b><small>在微信中搜索“微信记账本”小程序并进入</small></div></div><div class="guide-step"><span>2</span><div><b>选择“统计”页面</b><small>在微信记账本下方选择“统计”页面</small></div></div><div class="guide-step"><span>3</span><div><b>选择月份与支出</b><small>切换到需要复盘的月份并选择“支出”，核对平台自动分类是否正确</small></div></div><div class="guide-step"><span>4</span><div><b>获取完整截图</b><small>获取长截图，或按从上到下的顺序分多张截图；截取至“每日统计”上方即可</small></div></div></div>
+      <div class="guide-example"><span class="guide-example-label">合格截图示意 · 金额已脱敏</span><img class="guide-example-image" id="guideImgWx" src="assets/guides/wechat-upload-guide-v1.png" alt="脱敏后的微信合格支出汇总截图示例" /><small class="guide-zoom-hint">点击图片可放大查看</small></div>
+      <div class="guide-privacy">只上传分类汇总；请勿上传含交易对象、商品名称或账号信息的逐笔明细。</div>
+      <div class="guide-tip">如果分多张截图上传，第一张请尽量包含月份和总支出，并按从上到下的顺序选择。</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-layer" id="sheetGuideAli">
+  <div class="sheet-backdrop" data-close="sheetGuideAli"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="支付宝截图指引">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico"><svg class="icon"><use href="#i-receipt"/></svg></div><h3>支付宝截图指引</h3><button class="sheet-close" data-close="sheetGuideAli"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="guide-steps"><div class="guide-step"><span>1</span><div><b>进入月度账单统计</b><small>支付宝 → 我的 → 账单 → 收支分析 → 月度账单</small></div></div><div class="guide-step"><span>2</span><div><b>打开支出分类</b><small>选择需要复盘的月份，并切换到“支出分类”</small></div></div><div class="guide-step"><span>3</span><div><b>保留浅蓝色二级分类</b><small>建议保留已展开的浅蓝色二级分类，系统可以识别并用于核对</small></div></div><div class="guide-step"><span>4</span><div><b>截取完整分类</b><small>截图应包含月份和所有分类；不支持长截图可按从上到下顺序上传多张</small></div></div></div>
+      <div class="guide-example"><span class="guide-example-label">合格截图示意 · 金额已脱敏</span><img class="guide-example-image" id="guideImgAli" src="assets/guides/alipay-upload-guide-v2.png" alt="脱敏后的支付宝合格支出分类截图示例" /><small class="guide-zoom-hint">点击图片可放大查看</small></div>
+      <div class="guide-privacy">只上传分类汇总；请勿上传含交易对象、商品名称或账号信息的逐笔明细。</div>
+      <div class="guide-tip">建议保留浅蓝色二级分类；系统会核对二级合计与一级总额，无法核对时保留一级总额并要求人工确认。</div>
+    </div>
+  </div>
+</div>
+
+<div class="sheet-layer" id="sheetFlow">
+  <div class="sheet-backdrop" data-close="sheetFlow"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="完整流程说明">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico"><svg class="icon"><use href="#i-scan"/></svg></div><h3>每月一次，五步完成</h3><button class="sheet-close" data-close="sheetFlow"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <ul class="sheet-list">
+        <li><span class="ic">1</span><span><b>填写收入</b><em>工资 / 副业 / 投资理财 / 其他，可跳过稍后补</em></span></li>
+        <li><span class="ic">2</span><span><b>上传截图</b><em>微信 + 支付宝月度汇总账单，每平台 ≤9 张</em></span></li>
+        <li><span class="ic">3</span><span><b>确认结果</b><em>核对金额校验、分类与金额，修正漏识别</em></span></li>
+        <li><span class="ic">4</span><span><b>补充支出</b><em>银行卡 / 现金等渠道支出手动补录</em></span></li>
+        <li><span class="ic">5</span><span><b>完成复盘</b><em>生成统一月报，约 5-10 分钟</em></span></li>
+      </ul>
+      <div class="sheet-note green"><svg class="icon"><use href="#i-check-circle"/></svg>全部流程本地完成，数据不出设备。历史月份可随时回看报告。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. 分类映射规则 -->
+<div class="sheet-layer" id="sheetRule">
+  <div class="sheet-backdrop" data-close="sheetRule"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="分类映射规则">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico warn"><svg class="icon"><use href="#i-tag"/></svg></div><h3>分类映射规则</h3><button class="sheet-close" data-close="sheetRule"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="sheet-map"><div class="k">微信「餐饮」</div><div class="v">→ 吃 / 外食</div></div>
+      <div class="sheet-map"><div class="k">微信「交通」</div><div class="v">→ 行 / 其他</div></div>
+      <div class="sheet-map"><div class="k">支付宝「餐饮美食 / 正餐」</div><div class="v">→ 吃 / 外食</div></div>
+      <div class="sheet-map"><div class="k">支付宝「日用百货」</div><div class="v">→ 用 / 日用百货</div></div>
+      <div class="sheet-map"><div class="k">支付宝「充值缴费 / 手机充值」</div><div class="v">→ 住 / 其他</div></div>
+      <div class="sheet-note"><svg class="icon"><use href="#i-alert-triangle"/></svg><b>转账 / 代付分类必须人工确认：</b>无法仅凭月度分类汇总判断是消费还是往来，默认标记为待人工确认，不会自动计入支出。</div>
+      <p class="muted">编辑过的平台分类映射会自动记忆，下次识别到同名分类时直接套用。</p>
+    </div>
+  </div>
+</div>
+
+<!-- 5. 自定义分类管理 -->
+<div class="sheet-layer" id="sheetCat">
+  <div class="sheet-backdrop" data-close="sheetCat"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="自定义分类管理">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico"><svg class="icon"><use href="#i-tag"/></svg></div><h3>管理自定义分类</h3><button class="sheet-close" data-close="sheetCat"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <div class="sheet-field-row">
+        <div class="sheet-field"><label for="newL1">新建一级分类</label><input type="text" id="newL1" placeholder="如：宠物"></div>
+        <div class="sheet-field"><label for="newL2">新建二级分类</label><input type="text" id="newL2" placeholder="如：猫粮"></div>
+      </div>
+      <div class="sheet-actions" style="margin-top:0;margin-bottom:14px">
+        <button class="btn btn-secondary btn-sm" id="addCatBtn"><svg class="icon"><use href="#i-plus"/></svg>添加</button>
+        <button class="btn btn-secondary btn-sm" id="resetCatBtn"><svg class="icon"><use href="#i-rotate-cw"/></svg>恢复系统预设分类</button>
+      </div>
+      <div id="customCatList"><!-- JS 渲染自定义分类 --></div>
+      <div class="sheet-note blue"><svg class="icon"><use href="#i-info"/></svg>删除自定义分类<b>不影响历史记录</b>，仅不再用于后续识别与新增。</div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. 人工补充对话框（补截图识别漏项） -->
+<div class="sheet-layer" id="sheetMissing">
+  <div class="sheet-backdrop" data-close="sheetMissing"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="人工补充漏项">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico"><svg class="icon"><use href="#i-pencil"/></svg></div><h3>补充截图漏项</h3><button class="sheet-close" data-close="sheetMissing"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <p class="muted" style="margin-bottom:12px">截图里没有识别到的支出，可在这里手动补录到本月账单。</p>
+      <div class="sheet-field-row">
+        <div class="sheet-field"><label for="msPlat">平台</label>
+          <div class="sel-wrap"><select id="msPlat"><option>微信支付</option><option>支付宝</option><option>银行卡</option><option>现金</option></select><svg class="icon"><use href="#i-chevron-down"/></svg></div>
+        </div>
+        <div class="sheet-field"><label for="msRaw">平台原分类</label><input type="text" id="msRaw" placeholder="如：生活缴费"></div>
+      </div>
+      <div class="sheet-field-row">
+        <div class="sheet-field"><label for="msL1">一级分类</label><div class="sel-wrap"><select id="msL1"></select><svg class="icon"><use href="#i-chevron-down"/></svg></div></div>
+        <div class="sheet-field"><label for="msL2">二级分类</label><div class="sel-wrap"><select id="msL2"></select><svg class="icon"><use href="#i-chevron-down"/></svg></div></div>
+      </div>
+      <div class="sheet-field-row">
+        <div class="sheet-field"><label for="msAmt">金额（元）</label><input type="number" id="msAmt" inputmode="decimal" placeholder="0.00"></div>
+        <div class="sheet-field"><label for="msDate">备注（可选）</label><input type="text" id="msDate" placeholder="如：截图末尾漏识别"></div>
+      </div>
+      <div class="sheet-actions">
+        <button class="btn btn-secondary" data-close="sheetMissing">取消</button>
+        <button class="btn btn-primary" id="msSave">保存到本月账单</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. 截图预览放大 -->
+<div class="sheet-layer" id="sheetPreview">
+  <div class="sheet-backdrop" data-close="sheetPreview"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="截图预览">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico"><svg class="icon"><use href="#i-eye"/></svg></div><h3 id="previewTitle">账单截图</h3><button class="sheet-close" data-close="sheetPreview"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="preview-img" id="previewBody"><svg class="icon"><use href="#i-receipt"/></svg></div>
+    <p class="preview-name">模拟预览：原型阶段展示占位，真实版本为所选截图原图</p>
+  </div>
+</div>
+
+<!-- 清除数据确认弹层 -->
+<div class="modal" id="clearModal" role="dialog" aria-modal="true" aria-label="确认清除数据" hidden>
+  <div class="backdrop" data-close="clearModal"></div>
+  <div class="sheet">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico danger"><svg class="icon"><use href="#i-trash-2"/></svg></div><h3>清除全部数据？</h3><button class="sheet-close" data-close="clearModal"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body">
+      <p class="muted" style="margin-bottom:16px">将删除本机保存的全部月报、识别记录与修正记忆，此操作<b>不可恢复</b>。建议先导出 JSON 备份。</p>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn btn-secondary" data-close="clearModal">取消</button>
+      <button class="btn btn-danger-solid" id="doClear">确认清除</button>
+    </div>
+  </div>
+</div>
+
+<!-- 本地提示消息框 -->
+<div class="notice" id="notice" role="status" aria-live="polite">
+  <div class="n-t"><svg class="icon"><use href="#i-info"/></svg><span id="noticeTitle">提示</span></div>
+  <div class="n-d" id="noticeDesc"></div>
+  <div class="n-btn"><button class="btn btn-secondary btn-sm" id="noticeOk">知道了</button></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="../mvp-db.js?v=0.7.2"></script>
+<script src="../mvp-ocr.js?v=0.7.2"></script>
+<script src="mobile-app.js?v=mobile-0.8.0-7"></script>
+</body>
+</html>
