@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION = '0.8.1-mobile';
+const APP_VERSION = '1.0.0-mobile';
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGES_PER_PLATFORM = 9;
 const RECONCILIATION_TOLERANCE = 10;

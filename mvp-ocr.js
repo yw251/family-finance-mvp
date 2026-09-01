@@ -1,10 +1,10 @@
 (function createLocalOcrEngine(global) {
   'use strict';
 
-  const PARSER_VERSION = '0.6.0';
+  const PARSER_VERSION = '0.7.0';
   const RECONCILIATION_TOLERANCE = 10;
-  const AMBIGUOUS_LABELS = new Set(['服务', '其他', '购物', '转账', '商业服务', '亲友代付']);
-  const EXCLUDED_BY_DEFAULT = new Set(['转账', '亲友代付']);
+  const AMBIGUOUS_LABELS = new Set(['服务', '其他', '购物', '转账', '发红包', '商业服务', '亲友代付', '信用借还']);
+  const EXCLUDED_BY_DEFAULT = new Set(['转账', '发红包', '亲友代付', '信用借还']);
 
   const CATALOGS = {
     wechat: [
@@ -12,7 +12,8 @@
       ['医疗', '健康', '看病', ['医疔']], ['餐饮', '吃', '外食', ['餐钦']], ['咖啡', '吃', '咖啡奶茶', []],
       ['外卖', '吃', '外卖简餐', ['外食']], ['交通', '行', '其他', ['交道', '交运']], ['旅行', '娱乐', '旅行', []],
       ['运动', '健康', '运动', []], ['保险', '健康', '保险', []], ['购物', '用', '日用百货', []],
-      ['服务', '其他', '其他', []], ['转账', '人情', '其他', ['转帐']], ['其他', '其他', '其他', []]
+      ['发红包', '人情', '红包', ['红包']], ['服务', '其他', '其他', []],
+      ['转账', '人情', '其他', ['转帐']], ['其他', '其他', '其他', []]
     ],
     alipay: [
       ['餐饮美食', '吃', '外食', ['餐钦美食']], ['交通出行', '行', '其他', ['交通出仃']],
@@ -21,7 +22,9 @@
       ['服饰装扮', '穿', '衣服', []], ['美容美发', '美', '美发', []],
       ['文化休闲', '娱乐', '影音', []], ['教育培训', '成长', '其他', []],
       ['母婴亲子', '宝', '其他', []], ['医疗健康', '健康', '看病', []],
-      ['亲友代付', '人情', '其他', []], ['商业服务', '其他', '其他', []], ['宠物', '其他', '宠物', []]
+      ['保险', '健康', '保险', []], ['生活服务', '其他', '其他', []],
+      ['信用借还', '人情', '其他', []], ['亲友代付', '人情', '其他', []],
+      ['商业服务', '其他', '其他', []], ['宠物', '其他', '宠物', []]
     ]
   };
   const ALIPAY_CHILD_CATALOG = [
@@ -32,10 +35,12 @@
     ['外卖', '餐饮美食', '吃', '外卖简餐', []],
     ['打车租车', '交通出行', '行', '打车', ['打车用车']],
     ['公交地铁', '交通出行', '行', '地铁公交', ['地铁公交']],
+    ['城际出行', '交通出行', '行', '高铁飞机', ['城际交通']],
     ['机票火车票', '交通出行', '行', '高铁飞机', ['火车飞机']],
     ['休闲娱乐', '文化休闲', '娱乐', '影音', []],
     ['图书', '文化休闲', '成长', '读书', []],
     ['手机充值', '充值缴费', '住', '其他', []],
+    ['电费', '充值缴费', '住', '其他', []],
     ['护肤彩妆', '美容美发', '美', '护肤', ['美容护肤']]
   ];
 
@@ -63,7 +68,11 @@
   }
 
   function categoryMatch(line, platform) {
-    const compact = normalizeLine(line).replace(/[\s\d.,%¥￥()（）<>·:：/\\_-]/g, '');
+    const normalized = normalizeLine(line);
+    const compact = normalized.replace(/[\s\d.,%¥￥()（）<>·:：/\\_-]/g, '');
+    if (platform === 'alipay' && /其他/.test(compact) && /[0-9](?:\.[0-9]+)?\s*%/.test(normalized)) {
+      return { label: '其他', unified: '其他', subcategory: '其他', confidence: 88, matchType: 'layout' };
+    }
     const catalog = CATALOGS[platform] || [];
     for (const [label, unified, subcategory, aliases] of catalog) {
       if (compact.includes(label)) return { label, unified, subcategory, confidence: 98, matchType: 'exact' };
@@ -87,23 +96,178 @@
 
   function amountFromLine(line) {
     const normalized = normalizeLine(line);
-    const currencyMatches = [...normalized.matchAll(/[¥￥Y#f{]\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/gi)];
+    const currencyMatches = [...normalized.matchAll(/[¥￥Y#f{]\s*([0-9](?:[0-9,]|\s(?=[0-9]))*(?:\.\s*[0-9]{1,2})?)/gi)];
     const decimalMatches = [...normalized.matchAll(/(?:^|\s)([0-9][0-9,]*\.[0-9]{2})(?!\s*%)/g)];
     const raw = currencyMatches.at(-1)?.[1] || decimalMatches.at(-1)?.[1];
     if (!raw) return null;
-    const amount = Number(raw.replace(/,/g, ''));
+    const amount = Number(raw.replace(/[\s,]/g, ''));
     return Number.isFinite(amount) && amount >= 0 ? amount : null;
   }
 
   function amountsFromLine(line) {
     const normalized = normalizeLine(line);
-    return [...normalized.matchAll(/[¥￥Y#f{]\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)/gi)]
-      .map((match) => Number(match[1].replace(/,/g, '')))
+    return [...normalized.matchAll(/[¥￥Y#f{]\s*([0-9](?:[0-9,]|\s(?=[0-9]))*(?:\.\s*[0-9]{1,2})?)/gi)]
+      .map((match) => Number(match[1].replace(/[\s,]/g, '')))
       .filter((amount) => Number.isFinite(amount) && amount >= 0);
   }
 
+  function percentFromLine(line) {
+    const matches = [...normalizeLine(line).matchAll(/([0-9]{1,3}(?:\.[0-9]{1,4})?)\s*%/g)]
+      .map((match) => Number(match[1]))
+      .filter((value) => Number.isFinite(value) && value > 0 && value <= 100);
+    return matches[0] ?? null;
+  }
+
+  function alipayPercentBySource(documents) {
+    const result = new Map();
+    const texts = documents.flatMap((document) => [
+      ...String(document.text || '').split(/\r?\n/),
+      ...(Array.isArray(document.lines) ? document.lines.map((line) => line?.text || '') : [])
+    ]);
+    texts.forEach((text) => {
+      const match = categoryMatch(text, 'alipay');
+      const percent = percentFromLine(text);
+      if (!match || alipayChildMatch(text) || percent === null) return;
+      if (!result.has(match.label)) result.set(match.label, percent);
+    });
+    return result;
+  }
+
+  function scaleOptionsForDisplayedAmount(amount) {
+    const options = [{ amount, scale: 1, penalty: 0 }];
+    if (!Number.isInteger(amount)) return options;
+    if (amount >= 1000) {
+      options.push({ amount: amount / 100, scale: 0.01, penalty: 2 });
+      options.push({ amount: amount / 10, scale: 0.1, penalty: 3 });
+    }
+    if (amount >= 100 && amount < 1000) options.push({ amount: amount * 10, scale: 10, penalty: 4 });
+    return [...new Map(options.map((option) => [option.amount.toFixed(2), option])).values()];
+  }
+
+  function normalizeAlipayParentAmounts(parentEntries, documents) {
+    const percentBySource = alipayPercentBySource(documents);
+    const evidence = parentEntries.map((entry) => ({
+      entry,
+      percent: percentBySource.get(entry.source),
+      options: scaleOptionsForDisplayedAmount(entry.amount)
+    })).filter((item) => Number.isFinite(item.percent));
+    if (evidence.length < 2) return parentEntries;
+
+    const totalCandidates = evidence.flatMap((item) => item.options.map((option) => ({
+      total: option.amount * 100 / item.percent,
+      seedPenalty: option.penalty
+    }))).filter((candidate) => candidate.total >= 50 && candidate.total <= 1000000);
+    const scored = totalCandidates.map((candidate) => {
+      let support = 0;
+      let distance = 0;
+      let scalePenalty = candidate.seedPenalty;
+      evidence.forEach((item) => {
+        const best = item.options.map((option) => ({
+          ...option,
+          relativeDifference: Math.abs(option.amount * 100 / item.percent - candidate.total) / candidate.total
+        })).sort((left, right) => left.relativeDifference - right.relativeDifference || left.penalty - right.penalty)[0];
+        const tolerance = item.percent <= 1 ? 0.3 : item.percent <= 3 ? 0.18 : 0.1;
+        if (best.relativeDifference <= tolerance) support += 1;
+        distance += Math.min(best.relativeDifference, 1);
+        scalePenalty += best.penalty;
+      });
+      return { ...candidate, support, score: support * 100 - distance * 20 - scalePenalty };
+    }).sort((left, right) => right.score - left.score || right.support - left.support);
+    const consensus = scored[0];
+    if (!consensus || consensus.support < Math.min(3, evidence.length)) return parentEntries;
+
+    return parentEntries.map((entry) => {
+      const percent = percentBySource.get(entry.source);
+      if (!Number.isFinite(percent)) return entry;
+      const expectedAmount = consensus.total * percent / 100;
+      const options = scaleOptionsForDisplayedAmount(entry.amount).map((option) => ({
+        ...option,
+        relativeDifference: Math.abs(option.amount - expectedAmount) / Math.max(expectedAmount, 0.01)
+      })).sort((left, right) => left.relativeDifference - right.relativeDifference || left.penalty - right.penalty);
+      const best = options[0];
+      const original = options.find((option) => option.scale === 1);
+      const tolerance = percent <= 1 ? 0.3 : percent <= 3 ? 0.18 : 0.1;
+      if (best.scale === 1 || best.relativeDifference > tolerance || original.relativeDifference - best.relativeDifference < 0.35) return entry;
+      return {
+        ...entry,
+        amount: Number(best.amount.toFixed(2)),
+        needsConfirm: true,
+        confirmed: false,
+        reason: '金额小数点或位数疑似漏识别，已结合分类占比与同图分类一致性纠正，请人工确认'
+      };
+    });
+  }
+
+  function safeDetectedTotal(rawTotal, categorySum, platform) {
+    if (!Number.isFinite(rawTotal) || rawTotal <= 0) return null;
+    if (platform !== 'alipay' || !Number.isInteger(rawTotal) || categorySum <= 0) return rawTotal;
+    const options = scaleOptionsForDisplayedAmount(rawTotal)
+      .map((option) => ({ ...option, difference: Math.abs(option.amount - categorySum) / Math.max(categorySum, 0.01) }))
+      .sort((left, right) => left.difference - right.difference || left.penalty - right.penalty);
+    if (options[0]?.difference <= 0.2) return Number(options[0].amount.toFixed(2));
+    return null;
+  }
+
+  function reconcileWechatEntriesWithPercents(entries, documents, total, ocrConfidence) {
+    if (!Number.isFinite(total) || total <= 0) return entries;
+    const percents = new Map();
+    documents.forEach((document) => {
+      const texts = [
+        ...String(document.text || '').split(/\r?\n/),
+        ...(Array.isArray(document.lines) ? document.lines.map((line) => line?.text || '') : [])
+      ];
+      texts.forEach((text) => {
+        const match = categoryMatch(text, 'wechat');
+        const percent = percentFromLine(text);
+        if (!match || percent === null || /[¥￥Y]/i.test(text)) return;
+        if (!percents.has(match.label)) percents.set(match.label, percent);
+      });
+    });
+    const amountCandidates = [];
+    documents.filter((document) => /wechat-list-right-(?:original|contrast)/.test(document.variant || '')).forEach((document) => {
+      const classificationSection = String(document.text || '').split(/每日对比|月度对比/)[0];
+      classificationSection.split(/\r?\n/).forEach((line) => {
+        amountsFromLine(line).forEach((amount) => {
+          if (amount > 0 && amount < total && Math.abs(amount - total) >= 0.005) amountCandidates.push(amount);
+        });
+      });
+    });
+    const uniqueAmounts = [...new Set(amountCandidates.map((amount) => Number(amount.toFixed(2))))];
+    if (!percents.size || !uniqueAmounts.length) return entries;
+
+    const used = new Set();
+    const verified = new Map();
+    [...percents.entries()].sort((left, right) => right[1] - left[1]).forEach(([source, percent]) => {
+      const ranked = uniqueAmounts.filter((amount) => !used.has(amount)).map((amount) => ({
+        amount,
+        difference: Math.abs(amount / total * 100 - percent)
+      })).sort((left, right) => left.difference - right.difference);
+      const tolerance = percent <= 0.05 ? 0.02 : 0.3;
+      if (!ranked.length || ranked[0].difference > tolerance) return;
+      used.add(ranked[0].amount);
+      verified.set(source, ranked[0].amount);
+    });
+    if (!verified.size) return entries;
+
+    const result = new Map(entries.map((entry) => [entry.source, entry]));
+    verified.forEach((amount, source) => {
+      const match = categoryMatch(source, 'wechat');
+      if (!match) return;
+      const corrected = parentEntry(match, amount, ocrConfidence, '微信分类占比、平台总额与右侧金额栏三方一致');
+      const current = result.get(source);
+      if (!current || Math.abs(current.amount - amount) >= 0.005) {
+        corrected.needsConfirm = corrected.needsConfirm || Boolean(current);
+        corrected.confirmed = !corrected.needsConfirm;
+      }
+      result.set(source, corrected);
+    });
+    return [...result.values()];
+  }
+
   function alipayChildMatch(line) {
-    const compact = normalizeLine(line).replace(/[\s\d.,%¥￥()（）<>·:：/\\_-]/g, '');
+    const normalized = normalizeLine(line);
+    if (/优惠|信用卡|立减金|去查看|查看更多/.test(normalized)) return null;
+    const compact = normalized.replace(/[\s\d.,%¥￥()（）<>·:：/\\_-]/g, '');
     for (const [label, parentSource, category, subcategory, aliases] of ALIPAY_CHILD_CATALOG) {
       if (compact.includes(label)) return { label, parentSource, category, subcategory, confidence: 98, matchType: 'exact' };
       const alias = aliases.find((candidate) => compact.includes(candidate));
@@ -273,7 +437,7 @@
       confirmed: !(ambiguous || fuzzy || confidence < 85),
       include: !excluded,
       inputMethod: 'ocr',
-      reason: excluded ? '转账或代付不一定属于消费，请确认是否计入' : ambiguous ? '平台分类范围较宽，请确认统一分类' : fuzzy ? '分类名称为模糊匹配，请确认' : reason
+      reason: excluded ? '该项目不一定属于消费，请确认是否计入' : ambiguous ? '平台分类范围较宽，请确认统一分类' : fuzzy ? '分类名称为模糊匹配，请确认' : reason
     };
   }
 
@@ -469,15 +633,16 @@
     return parentEntries.flatMap((parent) => {
       let children = childEntries.filter((entry) => entry.parentSource === parent.source);
       if (!children.length) return [parent];
-      const oversized = children.filter((entry) => entry.amount > parent.amount);
-      if (oversized.length === 1) {
-        const otherTotal = sum(children.filter((entry) => entry !== oversized[0]).map((entry) => entry.amount));
+      const residualCorrections = children.map((entry) => {
+        const otherTotal = sum(children.filter((candidate) => candidate !== entry).map((candidate) => candidate.amount));
         const residual = Number((parent.amount - otherTotal).toFixed(2));
-        if (residual > 0 && residual < parent.amount) {
-          children = children.map((entry) => entry === oversized[0]
-            ? { ...entry, amount: residual, needsConfirm: true, confirmed: false, reason: '金额小数点疑似漏识别，已由一级总额唯一反算，请人工确认' }
-            : entry);
-        }
+        return { entry, residual, ratio: residual > 0 ? entry.amount / residual : 0 };
+      }).filter((candidate) => candidate.residual > 0 && candidate.residual < parent.amount && candidate.ratio >= 9.5);
+      if (residualCorrections.length === 1) {
+        const correction = residualCorrections[0];
+        children = children.map((entry) => entry === correction.entry
+          ? { ...entry, amount: correction.residual, needsConfirm: true, confirmed: false, reason: '金额小数点疑似漏识别，已由一级总额唯一反算，请人工确认' }
+          : entry);
       }
       const childTotal = sum(children.map((entry) => entry.amount));
       const difference = Math.abs(parent.amount - childTotal);
@@ -502,7 +667,9 @@
       .map((match) => `${match[1]}-${String(Number(match[2])).padStart(2, '0')}`);
     // 微信绿色页头中的“8月”常被本地OCR稳定识别为“绷 H”，作为已验证的字形别名处理。
     const augustAliases = [...value.matchAll(/(20\d{2})\s*年\s*[绷朝]\s*[H月]?/g)].map((match) => `${match[1]}-08`);
-    return [...new Set([...direct, ...headerAliases, ...augustAliases])];
+    // 微信绿色页头中的“7”在当前真实长图上被稳定识别为斜杠，仅在完整“年/月”结构内纠正。
+    const julyAliases = [...value.matchAll(/(20\d{2})\s*年\s*[\/／]\s*月/g)].map((match) => `${match[1]}-07`);
+    return [...new Set([...direct, ...headerAliases, ...augustAliases, ...julyAliases])];
   }
 
   function totalFromDocuments(documents) {
@@ -591,6 +758,7 @@
       )));
     }
     if (platform !== 'alipay') return parentEntries;
+    parentEntries = normalizeAlipayParentAmounts(parentEntries, documents);
     const childMap = new Map();
     alipayChildEntriesFromText(text, ocrConfidence, !hasLayoutLines).forEach((entry) => childMap.set(`${entry.parentSource}|${entry.source}`, entry));
     alipayChildEntriesFromLayout(documents, ocrConfidence).forEach((entry) => childMap.set(`${entry.parentSource}|${entry.source}`, entry));
@@ -602,10 +770,15 @@
   function parseDocuments(platform, documents, expectedMonth) {
     const combinedText = documents.map((document) => document.text || '').join('\n');
     const averageConfidence = documents.length ? sum(documents.map((document) => document.confidence || 0)) / documents.length : 0;
-    const entries = entriesFromText(combinedText, platform, averageConfidence, documents);
-    const categorySum = sum(entries.map((entry) => entry.amount));
+    let entries = entriesFromText(combinedText, platform, averageConfidence, documents);
+    let categorySum = Number(sum(entries.map((entry) => entry.amount)).toFixed(2));
     const hasDedicatedHeader = documents.some((document) => /-header$/.test(document.segmentId || ''));
-    const detectedTotal = totalFromText(combinedText, platform) ?? (platform === 'wechat' || hasDedicatedHeader ? totalFromDocuments(documents) : null);
+    const rawDetectedTotal = totalFromText(combinedText, platform) ?? (platform === 'wechat' || hasDedicatedHeader ? totalFromDocuments(documents) : null);
+    const detectedTotal = safeDetectedTotal(rawDetectedTotal, categorySum, platform);
+    if (platform === 'wechat' && detectedTotal !== null) {
+      entries = reconcileWechatEntriesWithPercents(entries, documents, detectedTotal, averageConfidence);
+      categorySum = Number(sum(entries.map((entry) => entry.amount)).toFixed(2));
+    }
     const monthCandidates = detectedMonths(combinedText);
     const detectedMonth = monthCandidates.find((month) => month === expectedMonth) || monthCandidates[0] || null;
     const total = detectedTotal ?? categorySum;
@@ -715,6 +888,7 @@
       const cropHeight = bitmap.height <= 3400 ? bitmap.height : 3000;
       const step = bitmap.height <= 3400 ? bitmap.height : 2400;
       if (bitmap.height > 4500) {
+        await makeSegment(0, 0, bitmap.width, Math.min(1150, bitmap.height), 'alipay-header-original', `${record.id}-header`);
         await makeSegment(0, 0, bitmap.width, Math.min(1150, bitmap.height), 'alipay-header-contrast', `${record.id}-header`, true);
       }
       for (let top = 0; top < bitmap.height; top += step) {
