@@ -1,6 +1,6 @@
 'use strict';
 
-const APP_VERSION = '0.8.0-mobile';
+const APP_VERSION = '0.8.1-mobile';
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_IMAGES_PER_PLATFORM = 9;
 const RECONCILIATION_TOLERANCE = 10;
@@ -34,7 +34,9 @@ const INCOME_DEFS = [
   { id: 'other', name: '其他收入', note: '不含转账、借款与退款' }
 ];
 const CAT_ICON = { 吃: 'utensils', 穿: 'shopping-bag', 住: 'house', 行: 'bus', 用: 'shopping-bag', 美: 'heart-pulse', 宝: 'gift', 健康: 'heart-pulse', 成长: 'graduation-cap', 娱乐: 'pie', 人情: 'gift', 房租: 'house', 房贷: 'house', 父母: 'gift', 其他: 'tag' };
-const PALETTE = ['#B91C1C', '#DC2626', '#EF4444', '#F97316', '#F59E0B', '#FBBF24', '#EAB308', '#9A3412'];
+const INCOME_PALETTE = ['#2A5F9E', '#4F7FB6', '#78A2CC', '#A8C1DD'];
+const EXPENSE_PALETTE = ['#C65360', '#D36B75', '#DE838B', '#E79CA2', '#EDB2B6', '#A96E75'];
+const PALETTE = EXPENSE_PALETTE;
 const MODE_KEY = 'ff_mode';
 
 function makeDemoReview(month, income, categoryAmounts, incomeMix = {}) {
@@ -477,7 +479,6 @@ function renderShots() {
     button.setAttribute('aria-disabled', String(demoMode));
     const platform = button.dataset.plat;
     button.querySelector('b').textContent = demoMode ? `${platformName(platform)}演示结果已载入` : `添加${platformName(platform)}截图`;
-    button.querySelector('small').textContent = demoMode ? '演示模式无需上传真实图片' : '点击后选择拍照或手机相册';
   });
   $('#toStep3').disabled = !demoMode && uploaded === 0;
   $('#toStep3').textContent = demoMode ? '查看演示识别结果' : '开始识别';
@@ -793,8 +794,8 @@ function changePill(value, lowerIsBetter = false, kind = '环比') {
 
 function incomeStructure(report, review) {
   const items = [
-    ['工资', Number(review.income.salary || 0), '#1E40AF'], ['副业', Number(review.income.side || 0), '#2563EB'],
-    ['投资理财', Number(review.income.investment || 0), '#0EA5E9'], ['其他', Number(review.income.other || 0) + sum(review.customIncome.map((item) => item.amount)), '#38BDF8']
+    ['工资', Number(review.income.salary || 0), INCOME_PALETTE[0]], ['副业', Number(review.income.side || 0), INCOME_PALETTE[1]],
+    ['投资理财', Number(review.income.investment || 0), INCOME_PALETTE[2]], ['其他', Number(review.income.other || 0) + sum(review.customIncome.map((item) => item.amount)), INCOME_PALETTE[3]]
   ].filter((item) => item[1] > 0);
   if (!items.length) return '<p class="muted">本月未填写收入</p>';
   const segments = items.map(([name, amount, color]) => `<div class="stack-seg" style="width:${amount / report.income * 100}%;background:${color}"></div>`).join('');
@@ -828,18 +829,18 @@ function expensePie(report) {
 function flowChart(report, review) {
   if (!report.income && !report.expense) return '<p class="muted" style="padding:16px">暂无可展示的数据</p>';
   const incomeItems = [
-    ['工资', Number(review.income?.salary || 0), '#173f70'],
-    ['副业', Number(review.income?.side || 0), '#477ab2'],
-    ['投资理财', Number(review.income?.investment || 0), '#87a9cd'],
-    ['其他收入', Number(review.income?.other || 0) + sum((review.customIncome || []).map((item) => item.amount)), '#c6d5e5']
+    ['工资', Number(review.income?.salary || 0), INCOME_PALETTE[0]],
+    ['副业', Number(review.income?.side || 0), INCOME_PALETTE[1]],
+    ['投资理财', Number(review.income?.investment || 0), INCOME_PALETTE[2]],
+    ['其他收入', Number(review.income?.other || 0) + sum((review.customIncome || []).map((item) => item.amount)), INCOME_PALETTE[3]]
   ].filter((item) => item[1] > 0);
   if (report.expense > report.income) incomeItems.push(['本月缺口', report.expense - report.income, '#94a3b8']);
 
   const expenseSource = Object.entries(report.byCategory).sort((a, b) => b[1] - a[1]);
-  const expenseColors = ['#d85b66', '#df6d76', '#e47f87', '#e99197', '#eda4a9', '#f1b7bb'];
+  const expenseColors = EXPENSE_PALETTE;
   const expenseItems = expenseSource.slice(0, 5).map(([name, value], index) => [name, value, expenseColors[index]]);
   const remainingExpense = sum(expenseSource.slice(5).map(([, value]) => value));
-  if (remainingExpense > 0) expenseItems.push(['其他分类', remainingExpense, '#c87b83']);
+  if (remainingExpense > 0) expenseItems.push(['其他分类', remainingExpense, EXPENSE_PALETTE[5]]);
   const rightItems = [...expenseItems];
   if (report.surplus > 0) rightItems.push(['结余', report.surplus, '#2f8a62']);
 
@@ -857,7 +858,7 @@ function flowChart(report, review) {
   };
   const ribbon = (x1, y1a, y1b, x2, y2a, y2b, color) => {
     const curve = (x2 - x1) * .46;
-    return `<path d="M${x1} ${y1a} C${x1 + curve} ${y1a} ${x2 - curve} ${y2a} ${x2} ${y2a} L${x2} ${y2b} C${x2 - curve} ${y2b} ${x1 + curve} ${y1b} ${x1} ${y1b} Z" fill="${color}" fill-opacity=".42"/>`;
+    return `<path d="M${x1} ${y1a} C${x1 + curve} ${y1a} ${x2 - curve} ${y2a} ${x2} ${y2a} L${x2} ${y2b} C${x2 - curve} ${y2b} ${x1 + curve} ${y1b} ${x1} ${y1b} Z" fill="${color}" fill-opacity=".58"/>`;
   };
   const amountLabel = (name, value) => `${escapeHtml(name)} ¥${Math.round(value).toLocaleString('zh-CN')}`;
 
@@ -881,7 +882,7 @@ function flowChart(report, review) {
   }).join('');
 
   const centerLabel = report.expense > report.income ? `收入及缺口 ¥${fmt(flowTotal)}` : `总收入 ¥${fmt(report.income)}`;
-  return `<div class="sankey-intro">收入来源汇入本月总收入，再按支出一级分类与结余分流</div><svg class="mobile-sankey" viewBox="0 0 ${width} ${height}" role="img" aria-label="收入来源、一级支出分类与结余桑基图">${leftMarkup}<rect x="${centerX}" y="${centerTop}" width="${nodeWidth}" height="${flowHeight}" rx="3" fill="#245fa4"/><text x="${centerX + nodeWidth / 2}" y="${centerTop - 12}" text-anchor="middle" class="sankey-total">${centerLabel}</text>${rightMarkup}</svg>`;
+  return `<div class="sankey-intro">收入来源汇入本月总收入，再按支出一级分类与结余分流</div><svg class="mobile-sankey" viewBox="0 0 ${width} ${height}" role="img" aria-label="收入来源、一级支出分类与结余桑基图">${leftMarkup}<rect x="${centerX}" y="${centerTop}" width="${nodeWidth}" height="${flowHeight}" rx="3" fill="${INCOME_PALETTE[0]}"/><text x="${centerX + nodeWidth / 2}" y="${centerTop - 12}" text-anchor="middle" class="sankey-total">${centerLabel}</text>${rightMarkup}</svg>`;
 }
 
 function yoyMarkup(report, previousYear) {
@@ -963,18 +964,25 @@ function currentMonthCsv() {
   return `\ufeff${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`;
 }
 
-async function exportBackup() { await persistReview(); const backup = await FinanceDB.exportBackup(); exportBlob(`家财月报-完整本地备份-${state.month}.json`, JSON.stringify(backup)); await FinanceDB.setSetting('lastBackupAt', new Date().toISOString()); toast('完整 JSON 备份已导出'); }
-async function restoreBackup(file) { if (!file || !confirm('恢复备份会替换当前浏览器中的全部家财月报数据，确定继续吗？')) return; try { const backup = JSON.parse(await file.text()); await FinanceDB.importBackup(backup); showNotice('备份恢复成功', '页面即将重新加载。'); setTimeout(() => location.reload(), 500); } catch (error) { showNotice('无法恢复备份', error.message); } }
-async function exportEvents() { const events = await FinanceDB.listEvents(); const rows = [['事件时间', '事件类型', '月份', '平台', '耗时毫秒', '图片数', '分类数']]; events.forEach((event) => rows.push([event.createdAt || '', event.type || '', event.month || '', event.platform || '', event.durationMs || '', event.imageCount || event.count || '', event.entryCount || event.categoryCount || ''])); exportBlob(`家财月报-试用事件-${state.month}.csv`, `\ufeff${rows.map((row) => row.map(csvCell).join(',')).join('\r\n')}`, 'text/csv;charset=utf-8'); toast('试用事件 CSV 已导出'); }
-async function exportImages() { const records = [...imagesByPlatform.wechat, ...imagesByPlatform.alipay]; if (!records.length) return showNotice('本月没有可导出的原图', '本月未保存截图，或截图已在完成确认后删除。'); records.forEach((record, index) => setTimeout(() => exportBlob(`${platformName(record.platform)}-${index + 1}-${record.name.replace(/[<>:"/\\|?*]/g, '_')}`, record.blob, record.type), index * 180)); toast(`开始下载 ${records.length} 张原始截图`); }
+async function exportBackup() { if (APP_MODE === 'demo') return showNotice('演示账本不参与完整备份', '请切换到“我的账本”后导出真实账本的 JSON 备份。'); await persistReview(); const backup = await FinanceDB.exportBackup(); exportBlob(`家财月报-完整本地备份-${state.month}.json`, JSON.stringify(backup)); await FinanceDB.setSetting('lastBackupAt', new Date().toISOString()); toast('完整 JSON 备份已导出'); }
+async function restoreBackup(file) { if (APP_MODE === 'demo') return showNotice('演示账本不能恢复备份', '请先切换到“我的账本”，再从 JSON 备份恢复真实账本。'); if (!file || !confirm('恢复备份会替换当前浏览器中的全部家财月报数据，确定继续吗？')) return; try { const backup = JSON.parse(await file.text()); await FinanceDB.importBackup(backup); showNotice('备份恢复成功', '页面即将重新加载。'); setTimeout(() => location.reload(), 500); } catch (error) { showNotice('无法恢复备份', error.message); } }
+async function exportImages() { if (APP_MODE === 'demo') return showNotice('演示账本没有原始截图', '演示识别结果为内置示例，不包含可下载的微信或支付宝原图。'); const records = [...imagesByPlatform.wechat, ...imagesByPlatform.alipay]; if (!records.length) return showNotice('本月没有可导出的原图', '本月未保存截图，或截图已在完成确认后删除。'); records.forEach((record, index) => setTimeout(() => exportBlob(`${platformName(record.platform)}-${index + 1}-${record.name.replace(/[<>:"/\\|?*]/g, '_')}`, record.blob, record.type), index * 180)); toast(`开始下载 ${records.length} 张原始截图`); }
 
 function renderSettings() {
   $('#categoryTreeSummary').innerHTML = categoryTree.map((group) => `<div class="ct1">${ic(`i-${CAT_ICON[group.name] || 'tag'}`)}${escapeHtml(group.name)}</div>${group.children.length ? `<div class="ct2">${group.children.map((child) => `<span>${escapeHtml(child)}</span>`).join('')}</div>` : ''}`).join('');
   renderCustomCategoryList();
-  const modeText = APP_MODE === 'demo' ? '当前为演示账本，真实本地数据未被修改' : `当前为我的账本${hasOwnData() ? '，已有本地数据' : '，尚未记录数据'}`;
-  const resetModeText = $('#resetModeBtn .set-txt em');
-  if (resetModeText) resetModeText.textContent = modeText;
-  navigator.storage?.persisted?.().then((persisted) => { $('#storagePill').textContent = persisted ? '已保护' : '未申请'; $('#storagePill').className = `storage-pill${persisted ? '' : ' warn'}`; }).catch(() => {});
+  const backupSection = $('.export-list');
+  if (backupSection) backupSection.classList.toggle('demo-limited', APP_MODE === 'demo');
+  [...$$('[data-exp="json"], [data-exp="shots"]'), $('#restoreBtn'), $('#clearBtn')].filter(Boolean).forEach((element) => {
+    element.classList.toggle('demo-unavailable', APP_MODE === 'demo');
+    element.setAttribute('aria-disabled', String(APP_MODE === 'demo'));
+  });
+  if (!navigator.storage?.persisted) {
+    $('#storagePill').textContent = '不支持';
+    $('#storagePill').className = 'storage-pill warn';
+    return;
+  }
+  navigator.storage.persisted().then((persisted) => { $('#storagePill').textContent = persisted ? '已开启' : '未开启'; $('#storagePill').className = `storage-pill${persisted ? '' : ' warn'}`; }).catch(() => { $('#storagePill').textContent = '无法检测'; $('#storagePill').className = 'storage-pill warn'; });
 }
 
 function renderCustomCategoryList() {
@@ -988,8 +996,8 @@ async function persistCategoryTree() {
 }
 
 async function requestStorageProtection() {
-  if (!navigator.storage?.persist) return showNotice('当前浏览器不支持', '请定期导出完整 JSON 备份。');
-  const granted = await navigator.storage.persist(); renderSettings(); showNotice(granted ? '本地存储保护已增强' : '浏览器没有授予增强保护', granted ? '浏览器会尽量避免自动清理数据，但仍建议定期备份。' : '数据仍会保存在本地，请定期导出备份。');
+  if (!navigator.storage?.persist) return showNotice('当前浏览器不支持存储保护', '数据仍会正常保存在本地，但浏览器可能在清理数据或存储空间紧张时删除记录，请定期导出完整 JSON 备份。');
+  const granted = await navigator.storage.persist(); renderSettings(); showNotice(granted ? '本地存储保护已开启' : '浏览器没有开启存储保护', granted ? '浏览器会尽量避免自动清理本站数据，但这不是加密，也不能替代定期备份。' : '数据仍会正常保存在本地，请定期导出完整 JSON 备份。');
 }
 
 function previewImage(id) {
@@ -1011,7 +1019,6 @@ function bindEvents() {
   $('#obDemo').addEventListener('click', () => chooseMode('demo').catch((error) => showNotice('无法切换账本', error.message)));
   $('#obOwn').addEventListener('click', () => chooseMode('own').catch((error) => showNotice('无法切换账本', error.message)));
   $('#obClose').addEventListener('click', () => { if (onboardingCanClose) hideOnboarding(); });
-  $('#resetModeBtn').addEventListener('click', () => { try { localStorage.removeItem(MODE_KEY); } catch (_) {} APP_MODE = null; showOnboarding({ allowClose: false, step: 3 }); });
   $('#reobBtn').addEventListener('click', () => showOnboarding({ allowClose: true, step: 1 }));
   $$('[data-quick-mode]').forEach((button) => button.addEventListener('click', () => {
     const mode = button.dataset.quickMode;
@@ -1054,15 +1061,14 @@ function bindEvents() {
   $('#noticeOk').addEventListener('click', () => $('#notice').classList.remove('show'));
   $('#requestStorageBtn').addEventListener('click', () => requestStorageProtection().catch((error) => showNotice('申请失败', error.message)));
   $('#delShotToggle').addEventListener('click', async () => { const on = !$('#delShotToggle').classList.contains('on'); $('#delShotToggle').classList.toggle('on', on); $('#delShotToggle').setAttribute('aria-checked', String(on)); await FinanceDB.setSetting('deleteImagesAfterConfirm', on); });
-  $('#restoreBtn').addEventListener('click', () => $('#restoreFile').click());
+  $('#restoreBtn').addEventListener('click', () => { if (APP_MODE === 'demo') return showNotice('演示账本不能恢复备份', '请先切换到“我的账本”，再从 JSON 备份恢复真实账本。'); $('#restoreFile').click(); });
   $('#restoreFile').addEventListener('change', (event) => restoreBackup(event.target.files[0]));
-  $('#clearBtn').addEventListener('click', () => { $('#clearModal').hidden = false; });
+  $('#clearBtn').addEventListener('click', () => { if (APP_MODE === 'demo') return showNotice('演示账本不会保存这些修改', '如需清除真实账本数据，请先切换到“我的账本”。'); $('#clearModal').hidden = false; });
   $('#doClear').addEventListener('click', async () => { await FinanceDB.clearAll(); location.reload(); });
   $$('.export-item').forEach((button) => button.addEventListener('click', () => {
     const action = button.dataset.exp;
     if (action === 'json') exportBackup().catch((error) => showNotice('备份失败', error.message));
     if (action === 'csv') { exportBlob(`家财月报-${state.month}.csv`, currentMonthCsv(), 'text/csv;charset=utf-8'); toast('本月 CSV 已导出'); }
-    if (action === 'event') exportEvents().catch((error) => showNotice('导出失败', error.message));
     if (action === 'shots') exportImages().catch((error) => showNotice('导出失败', error.message));
   }));
   $('#addCatBtn').addEventListener('click', () => { const primary = $('#newL1').value.trim().slice(0, 12), secondary = $('#newL2').value.trim().slice(0, 16); if (!primary) return toast('请填写一级分类'); let group = categoryTree.find((item) => item.name === primary); if (!group) { group = { name: primary, children: [] }; categoryTree.push(group); } if (secondary && !group.children.includes(secondary)) group.children.push(secondary); $('#newL1').value = ''; $('#newL2').value = ''; persistCategoryTree().then(() => toast('分类已保存')); });

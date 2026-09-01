@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#FBFBFA">
-<title>家财月报 · 月度收支复盘（v0.8.0 手机试用版）</title>
-<link rel="stylesheet" href="mobile.css?v=mobile-0.8.0-7">
+<title>家财月报 · 月度收支复盘（v0.8.1 手机试用版）</title>
+<link rel="stylesheet" href="mobile.css?v=mobile-0.8.1-1">
 
 </head>
 <body>
@@ -87,11 +87,11 @@
         <div class="ob-logo"><svg class="icon"><use href="#i-receipt"/></svg></div>
         <h1>家财月报</h1>
         <p class="ob-sub">每月一次，轻松完成收支盘点</p>
-        <p class="ob-desc">输入收入情况，上传微信、支付宝月度汇总截图，本地识别后人工确认，几分钟生成统一月报。</p>
+        <p class="ob-desc">输入收入情况，上传微信/支付宝月度支出汇总截图，本地识别后人工确认，几分钟生成统一月报。</p>
         <div class="ob-points">
           <span><svg class="icon"><use href="#i-lock"/></svg>截图仅在本地识别</span>
           <span><svg class="icon"><use href="#i-shield"/></svg>数据不出浏览器</span>
-          <span><svg class="icon"><use href="#i-user"/></svg>无需账号</span>
+          <span><svg class="icon"><use href="#i-user"/></svg>当前版本无需账号登录</span>
         </div>
       </section>
       <section class="ob-slide" data-ob="2">
@@ -99,7 +99,7 @@
         <h1>5 步完成月度复盘</h1>
         <div class="ob-steps">
           <div class="ob-step"><span><svg class="icon"><use href="#i-wallet"/></svg></span><b>填收入</b><small>四类收入分项</small></div>
-          <div class="ob-step"><span><svg class="icon"><use href="#i-upload"/></svg></span><b>传截图</b><small>微信/支付宝汇总</small></div>
+          <div class="ob-step"><span><svg class="icon"><use href="#i-upload"/></svg></span><b>传截图</b><small>微信/支付宝支出汇总</small></div>
           <div class="ob-step"><span><svg class="icon"><use href="#i-check"/></svg></span><b>做确认</b><small>只看异常项</small></div>
           <div class="ob-step"><span><svg class="icon"><use href="#i-banknote"/></svg></span><b>补支出</b><small>银行卡/现金</small></div>
           <div class="ob-step"><span><svg class="icon"><use href="#i-file-text"/></svg></span><b>看月报</b><small>统一月度报告</small></div>
@@ -126,7 +126,7 @@
   <!-- ================= 财务概览 ================= -->
   <section class="page active" id="page-home" role="tabpanel" aria-label="财务概览">
     <div class="trialbar">
-      <span class="trial-pill"><svg class="icon"><use href="#i-info"/></svg>v0.8.0 手机试用版</span>
+      <span class="trial-pill"><svg class="icon"><use href="#i-info"/></svg>v0.8.1 手机试用版</span>
       <span class="trial-pill demo" id="demoPill" hidden></span>
       <span class="trial-status" id="homeTrialStatus"><span class="dot"></span><span id="homeTrialTxt">2026 年 8 月 · 待完成</span></span>
     </div>
@@ -208,7 +208,7 @@
           <button class="plat-help" data-guide="wechat" aria-label="微信截图指引">指引</button>
         </div>
         <div class="thumb-grid" data-plat="wechat"></div>
-        <button class="upload-add add-shot" data-plat="wechat"><span class="upload-plus"><svg class="icon"><use href="#i-plus"/></svg></span><span><b>添加微信截图</b><small>点击后选择拍照或手机相册</small></span></button>
+        <button class="upload-add add-shot" data-plat="wechat"><span class="upload-plus"><svg class="icon"><use href="#i-plus"/></svg></span><span><b>添加微信截图</b></span></button>
         <input class="platform-file-input" id="wechatAlbumFiles" type="file" accept="image/*,.heic,.heif" multiple hidden>
       </div>
       <div class="card plat" id="platAlipay">
@@ -218,7 +218,7 @@
           <button class="plat-help" data-guide="alipay" aria-label="支付宝截图指引">指引</button>
         </div>
         <div class="thumb-grid" data-plat="alipay"></div>
-        <button class="upload-add add-shot" data-plat="alipay"><span class="upload-plus"><svg class="icon"><use href="#i-plus"/></svg></span><span><b>添加支付宝截图</b><small>点击后选择拍照或手机相册</small></span></button>
+        <button class="upload-add add-shot" data-plat="alipay"><span class="upload-plus"><svg class="icon"><use href="#i-plus"/></svg></span><span><b>添加支付宝截图</b></span></button>
         <input class="platform-file-input" id="alipayAlbumFiles" type="file" accept="image/*,.heic,.heif" multiple hidden>
       </div>
 
@@ -355,14 +355,10 @@
         <span class="set-txt"><b>完成确认后删除原始截图</b><em>复盘完成后自动清理已识别截图</em></span>
         <button class="toggle" id="delShotToggle" role="switch" aria-checked="false" aria-label="完成确认后删除原始截图"></button>
       </div>
-      <div class="toggle-row">
-        <span class="set-ico accent"><svg class="icon"><use href="#i-shield"/></svg></span>
-        <span class="set-txt"><b>增强本地存储保护</b><em>请求浏览器持久化存储，避免数据被清理</em></span>
-        <span class="storage-pill warn" id="storagePill">未申请</span>
-      </div>
       <button class="set-row" id="requestStorageBtn" style="border-bottom:none">
-        <span class="set-ico"><svg class="icon"><use href="#i-refresh-cw"/></svg></span>
-        <span class="set-txt"><b>申请存储保护</b><em>调用 navigator.storage.persist()</em></span>
+        <span class="set-ico accent"><svg class="icon"><use href="#i-shield"/></svg></span>
+        <span class="set-txt"><b>本地存储保护</b><em>减少浏览器自动清理数据的可能，不是加密或密码保护</em></span>
+        <span class="storage-pill warn" id="storagePill">未开启</span>
         <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
       </button>
     </div>
@@ -387,10 +383,6 @@
         <span class="set-ico"><svg class="icon"><use href="#i-file-text"/></svg></span>
         <span><b>本月 CSV 表格</b><em>本月收支明细，可用 Excel / Numbers 打开</em></span>
       </button>
-      <button class="export-item" data-exp="event">
-        <span class="set-ico"><svg class="icon"><use href="#i-trending-up"/></svg></span>
-        <span><b>试用事件 CSV</b><em>仅流程耗时，不含金额，用于产品体验分析</em></span>
-      </button>
       <button class="export-item" data-exp="shots">
         <span class="set-ico"><svg class="icon"><use href="#i-image-plus"/></svg></span>
         <span><b>本月原始截图下载</b><em>按平台与顺序逐张下载</em></span>
@@ -401,11 +393,6 @@
         <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
       </button>
       <input id="restoreFile" type="file" accept="application/json,.json" hidden>
-      <button class="set-row" id="resetModeBtn" style="border-bottom:1px solid var(--border-soft)">
-        <span class="set-ico"><svg class="icon"><use href="#i-refresh-cw"/></svg></span>
-        <span class="set-txt"><b>重新选择账本</b><em>返回选择页（演示账本 / 我的账本）</em></span>
-        <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
-      </button>
       <button class="set-row" id="clearBtn" style="border-bottom:none">
         <span class="set-ico danger"><svg class="icon"><use href="#i-trash-2"/></svg></span>
         <span class="set-txt danger-txt"><b>清除全部数据</b><em>删除本机全部月报与识别记录</em></span>
@@ -427,7 +414,7 @@
         <svg class="icon set-chev"><use href="#i-chevron-right"/></svg>
       </button>
     </div>
-    <p class="foot-note"><svg class="icon"><use href="#i-lock"/></svg>家财月报 · 个人本地版，一个链接全家可用</p>
+    <p class="foot-note"><svg class="icon"><use href="#i-lock"/></svg>家财月报 · 个人本地版</p>
   </section>
 
 </main>
@@ -588,6 +575,21 @@
   </div>
 </div>
 
+<!-- 8. 隐私说明 -->
+<div class="sheet-layer" id="sheetPrivacy">
+  <div class="sheet-backdrop" data-close="sheetPrivacy"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-label="隐私说明">
+    <div class="sheet-grab"></div>
+    <div class="sheet-head"><div class="sheet-ico"><svg class="icon"><use href="#i-lock"/></svg></div><h3>隐私说明</h3><button class="sheet-close" data-close="sheetPrivacy"><svg class="icon"><use href="#i-x"/></svg></button></div>
+    <div class="sheet-body privacy-sheet">
+      <div class="privacy-point"><svg class="icon"><use href="#i-shield"/></svg><span><b>数据保存在当前浏览器</b><em>收入、分类、月报和识别结果存储在当前设备的浏览器中，不会同步到云端。</em></span></div>
+      <div class="privacy-point"><svg class="icon"><use href="#i-scan"/></svg><span><b>截图仅在本地识别</b><em>应用不接入微信或支付宝账户，也不会读取支付平台的逐笔交易。</em></span></div>
+      <div class="privacy-point"><svg class="icon"><use href="#i-eye"/></svg><span><b>请只上传分类汇总</b><em>请勿上传包含交易对象、商品名称、账号等信息的逐笔交易明细。</em></span></div>
+      <div class="sheet-note blue"><svg class="icon"><use href="#i-info"/></svg><span>清理浏览器数据、使用无痕模式或更换设备都可能导致记录丢失，建议定期导出完整 JSON 备份。</span></div>
+    </div>
+  </div>
+</div>
+
 <!-- 清除数据确认弹层 -->
 <div class="modal" id="clearModal" role="dialog" aria-modal="true" aria-label="确认清除数据" hidden>
   <div class="backdrop" data-close="clearModal"></div>
@@ -619,6 +621,6 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="../mvp-db.js?v=0.7.2"></script>
 <script src="../mvp-ocr.js?v=0.7.2"></script>
-<script src="mobile-app.js?v=mobile-0.8.0-7"></script>
+<script src="mobile-app.js?v=mobile-0.8.1-1"></script>
 </body>
 </html>
