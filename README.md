@@ -5,9 +5,11 @@
 ## 在线入口
 
 - [电脑网页版 v0.7.2](https://yw251.github.io/family-finance-mvp/)
-- [独立手机版 v0.8.0](https://yw251.github.io/family-finance-mvp/mobile/)
+- [独立手机版 v0.8.1](https://yw251.github.io/family-finance-mvp/mobile/)
 
-手机版 v0.8.0 采用独立手机界面，新增三屏新手引导、演示账本／我的账本切换、五步单列盘点、手机确认卡片和新版月报。演示账本可完整体验盘点并临时修改，刷新后恢复默认示例，不写入真实账本。
+手机版 v0.8.1 采用独立手机界面，包含三屏新手引导、演示账本／我的账本切换、五步单列盘点、手机确认卡片、隐私说明和统一图表配色。演示账本可完整体验盘点并临时修改，刷新后恢复默认示例，不写入真实账本。
+
+[打开手机版二维码](https://yw251.github.io/family-finance-mvp/mobile/assets/family-finance-mobile-qr.png)
 
 电脑网页版继续保持 v0.7.2。外部用户任务指标与独立测试集结果仍在收集中。
 
